@@ -22,7 +22,7 @@ id_indicador = opciones[opcion]
 
 # Parámetros de fecha (interactivos)
 st.sidebar.header("Parámetros de fecha")
-anio_inicio = st.sidebar.number_input("Año de inicio", min_value=1990, max_value=2025, value=2020)
+anio_inicio = st.sidebar.number_input("Año de inicio", min_value=1990, max_value=2025, value=2022)
 mes_inicio = st.sidebar.selectbox("Mes de inicio", list(range(1, 13)), index=0)
 
 anio_final = st.sidebar.number_input("Año final", min_value=1990, max_value=2025, value=2024)
