@@ -21,7 +21,7 @@ def graficar_variable(df, nombre_variable, anio_ini, mes_ini, anio_fin, mes_fin)
 
     # Crear gráfico
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(resumen['mes'], resumen['valor'], marker='o', linestyle='-')
+    ax.plot(resumen['mes'], resumen['valor'], linestyle='-')
     ax.set_title(f"{nombre_variable}", fontsize=14)
     ax.set_xlabel("Fecha")
     ax.set_ylabel("Valor promedio mensual")
