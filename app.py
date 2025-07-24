@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-from procesamiento_bcra import obtener_datos_completos,graficar_variable,graficar_por_dia
-
+from procesamiento_bcra import obtener_datos_completos
+from graficos import graficar_variable,graficar_por_dia
 
 st.set_page_config(page_title="Visualización BCRA", layout="wide")
 
