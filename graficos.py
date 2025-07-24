@@ -33,9 +33,10 @@ def graficar_variable(df, anio_ini, mes_ini, anio_fin, mes_fin, titulo, ylabel):
     buf.seek(0)
     return buf
 
-def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_fin, mes_fin, anio_fin):
+def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final, ylabel):
+
     fecha_ini = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-{dia_ini:02d}")
-    fecha_fin = pd.to_datetime(f"{anio_fin}-{mes_fin:02d}-{dia_fin:02d}")
+    fecha_fin = pd.to_datetime(f"{anio_final}-{mes_final:02d}-{dia_final:02d}")
 
     df_filtrado = df[(df["fecha"] >= fecha_ini) & (df["fecha"] <= fecha_fin)].copy()
 
@@ -43,13 +44,8 @@ def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_fin, m
         st.warning("No hay datos disponibles en el rango seleccionado.")
         return
 
-    fig = px.line(
-        df_filtrado,
-        x="fecha",
-        y="valor",
-        title=nombre_variable,
-        labels={"fecha": "Fecha", "valor": "Valor"},
-        markers=True
-    )
-    fig.update_layout(xaxis_title="Fecha", yaxis_title="Valor", hovermode="x unified")
+    fig = px.line(df_filtrado, x="fecha", y="valor", title=nombre_variable, labels={"valor": ylabel})
+    fig.update_traces(mode="lines+markers")
+    fig.update_layout(xaxis_title="Fecha", yaxis_title=ylabel, hovermode="x")
+
     st.plotly_chart(fig, use_container_width=True)
