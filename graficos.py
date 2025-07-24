@@ -5,33 +5,41 @@ import streamlit as st
 import plotly.express as px
 
 
-def graficar_variable(df, anio_ini, mes_ini, anio_fin, mes_fin, titulo, ylabel):
-    fecha_inicio = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-01")
-    fecha_final = pd.to_datetime(f"{anio_fin}-{mes_fin:02d}-01")
+def graficar_variable(df, nombre_variable, anio_ini, mes_ini, anio_fin, mes_fin, ylabel):
+    try:
+        anio_ini = int(anio_ini)
+        mes_ini = int(mes_ini)
+        anio_fin = int(anio_fin)
+        mes_fin = int(mes_fin)
 
-    df = df[(df['fecha'] >= fecha_inicio) & (df['fecha'] <= fecha_final)].copy()
-    if df.empty:
-        raise ValueError("No hay datos en el rango de fechas seleccionado.")
+        fecha_inicio = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-01")
+        fecha_final = pd.to_datetime(f"{anio_fin}-{mes_fin:02d}-01")
+    except Exception as e:
+        st.error(f"Error al crear las fechas: {e}")
+        return
 
-    df['mes'] = df['fecha'].dt.to_period('M')
-    resumen = df.groupby('mes')['valor'].mean().reset_index()
-    resumen['mes'] = resumen['mes'].dt.to_timestamp()
+    if "fecha" not in df.columns:
+        st.error("La columna 'fecha' no está en el DataFrame.")
+        return
 
-    fig = px.line(
-        resumen,
-        x='mes',
-        y='valor',
-        title=titulo,
-        labels={'mes': 'Fecha', 'valor': ylabel},
-        markers=True
-    )
-    fig.update_layout(xaxis_title="Fecha", yaxis_title=ylabel)
+    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
 
-    # Exportar como imagen para FastAPI
-    buf = io.BytesIO()
-    fig.write_image(buf, format="png")
-    buf.seek(0)
-    return buf
+    if df["fecha"].isnull().any():
+        st.error("Hay fechas inválidas en los datos. Verificá el formato.")
+        return
+
+    df_filtrado = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_final)].copy()
+
+    if df_filtrado.empty:
+        st.warning("No hay datos en el rango seleccionado.")
+        return
+
+    fig = px.line(df_filtrado, x="fecha", y="valor", title=nombre_variable, labels={"valor": ylabel})
+    fig.update_traces(mode="lines+markers")
+    fig.update_layout(xaxis_title="Fecha", yaxis_title=ylabel, hovermode="x")
+
+    st.plotly_chart(fig, use_container_width=True)
+
 
 def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final, ylabel):
 
