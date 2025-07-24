@@ -1,57 +1,67 @@
 import streamlit as st
-from procesamiento_bcra import obtener_datos_completos
-from graficos import graficar_variable,graficar_por_dia
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import pandas as pd
+from procesamiento_bcra import (
+    obtener_datos_completos,
+    graficar_variable,
+    graficar_por_dia
+)
 
+st.set_page_config(page_title="Visualización BCRA", layout="wide")
 
-st.set_page_config(page_title="Visualización de Indicadores BCRA", layout="wide")
+st.title("Visualización de Indicadores Económicos del BCRA")
 
-st.title("📊 Visualización de Indicadores Económicos del BCRA")
+opciones = [
+    "Reservas Internacionales",
+    "Tipo de Cambio Minorista",
+    "Tipo de Cambio Mayorista",
+    "Baibar",
+    "Base Monetaria"
+]
 
-# Opciones disponibles
-opciones = {
+opcion = st.selectbox("Seleccioná el indicador", opciones)
+
+etiquetas = {
+    "Reservas Internacionales": "Millones de USD",
+    "Tipo de Cambio Minorista": "ARS por USD",
+    "Tipo de Cambio Mayorista": "ARS por USD",
+    "Baibar": "%",
+    "Base Monetaria": "ARS"
+}
+
+ids = {
     "Reservas Internacionales": 1,
     "Tipo de Cambio Minorista": 4,
     "Tipo de Cambio Mayorista": 5,
     "Baibar": 11,
-    "Base":15
+    "Base Monetaria":15
 }
-opcion = st.selectbox("Seleccioná un indicador", list(opciones.keys()))
-modo = st.radio("Tipo de visualización", ["Mensual", "Diaria"])
 
-id_indicador = opciones[opcion]
+id_indicador = ids[opcion]
+
 df = obtener_datos_completos(id_indicador)
 
-if modo == "Mensual":
+st.subheader("Seleccioná el rango de fechas")
+
+if opcion == "Reservas Internacionales":
     col1, col2 = st.columns(2)
     with col1:
-        anio_inicio = st.number_input("Año inicio", value=2020)
+        anio_inicio = st.number_input("Año inicio", min_value=1996, max_value=2100, value=2015)
         mes_inicio = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
     with col2:
-        anio_final = st.number_input("Año final", value=2024)
+        anio_final = st.number_input("Año final", min_value=1996, max_value=2100, value=2024)
         mes_final = st.number_input("Mes final", min_value=1, max_value=12, value=12)
 
-    graficar_variable(df, opcion, anio_inicio, mes_inicio, anio_final, mes_final)
+    graficar_variable(df, opcion, anio_inicio, mes_inicio, anio_final, mes_final, etiquetas[opcion])
 
-elif modo == "Diaria":
-    if opcion == "Reservas Internacionales":
-        st.warning("Los datos de reservas no tienen frecuencia diaria.")
-    else:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            dia_ini = st.number_input("Día inicio", min_value=1, max_value=31, value=1)
-        with col2:
-            mes_ini = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
-        with col3:
-            anio_ini = st.number_input("Año inicio", value=2023)
+else:
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        anio_inicio = st.number_input("Año inicio", min_value=2000, max_value=2100, value=2023)
+        mes_inicio = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
+        dia_inicio = st.number_input("Día inicio", min_value=1, max_value=31, value=1)
+    with col2:
+        anio_final = st.number_input("Año final", min_value=2000, max_value=2100, value=2024)
+        mes_final = st.number_input("Mes final", min_value=1, max_value=12, value=12)
+        dia_final = st.number_input("Día final", min_value=1, max_value=31, value=1)
 
-        col4, col5, col6 = st.columns(3)
-        with col4:
-            dia_fin = st.number_input("Día final", min_value=1, max_value=31, value=1)
-        with col5:
-            mes_fin = st.number_input("Mes final", min_value=1, max_value=12, value=1)
-        with col6:
-            anio_fin = st.number_input("Año final", value=2024)
-
-        graficar_por_dia(df, opcion, dia_ini, mes_ini, anio_ini, dia_fin, mes_fin, anio_fin)
+    graficar_por_dia(df, opcion, dia_inicio, mes_inicio, anio_inicio, dia_final, mes_final, anio_final, etiquetas[opcion])
