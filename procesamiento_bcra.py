@@ -7,7 +7,8 @@ archivos = {
     1: "data_vieja.csv",
     4: "tipo_cambio_minorista.csv",
     5: "tipo_cambio_mayorista.csv",
-    7: "tasa_politica.csv"
+    11: "df_baibar.csv",
+    15:"df_base.csv"
 }
 
 def cargar_csv_local(nombre_archivo):

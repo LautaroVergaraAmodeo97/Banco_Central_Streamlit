@@ -1,6 +1,6 @@
 import streamlit as st
 from procesamiento_bcra import obtener_datos_completos
-from graficos import graficar_variable
+from graficos import graficar_variable,graficar_por_dia
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -14,27 +14,44 @@ opciones = {
     "Reservas Internacionales": 1,
     "Tipo de Cambio Minorista": 4,
     "Tipo de Cambio Mayorista": 5,
-    "Tasa de Política Monetaria": 7
+    "Baibar": 11,
+    "Base":15
 }
+opcion = st.selectbox("Seleccioná un indicador", list(opciones.keys()))
+modo = st.radio("Tipo de visualización", ["Mensual", "Diaria"])
 
-opcion = st.selectbox("Seleccioná el indicador a visualizar:", list(opciones.keys()))
 id_indicador = opciones[opcion]
+df = obtener_datos_completos(id_indicador)
 
-# Parámetros de fecha (interactivos)
-st.sidebar.header("Parámetros de fecha")
-anio_inicio = st.sidebar.number_input("Año de inicio", min_value=1990, max_value=2025, value=2022)
-mes_inicio = st.sidebar.selectbox("Mes de inicio", list(range(1, 13)), index=0)
+if modo == "Mensual":
+    col1, col2 = st.columns(2)
+    with col1:
+        anio_inicio = st.number_input("Año inicio", value=2020)
+        mes_inicio = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
+    with col2:
+        anio_final = st.number_input("Año final", value=2024)
+        mes_final = st.number_input("Mes final", min_value=1, max_value=12, value=12)
 
-anio_final = st.sidebar.number_input("Año final", min_value=1990, max_value=2025, value=2024)
-mes_final = st.sidebar.selectbox("Mes final", list(range(1, 13)), index=11)
+    graficar_variable(df, opcion, anio_inicio, mes_inicio, anio_final, mes_final)
 
-# Validación básica
-if (anio_inicio, mes_inicio) > (anio_final, mes_final):
-    st.error("⚠️ La fecha de inicio debe ser anterior a la de finalización.")
-else:
-    try:
-        df = obtener_datos_completos(id_indicador)
-        st.markdown(f"### Mostrando datos desde **{mes_inicio}/{anio_inicio}** hasta **{mes_final}/{anio_final}**")
-        graficar_variable(df, opcion, anio_inicio, mes_inicio, anio_final, mes_final)
-    except Exception as e:
-        st.error(f"Ocurrió un error al graficar los datos: {e}")
+elif modo == "Diaria":
+    if opcion == "Reservas Internacionales":
+        st.warning("Los datos de reservas no tienen frecuencia diaria.")
+    else:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            dia_ini = st.number_input("Día inicio", min_value=1, max_value=31, value=1)
+        with col2:
+            mes_ini = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
+        with col3:
+            anio_ini = st.number_input("Año inicio", value=2023)
+
+        col4, col5, col6 = st.columns(3)
+        with col4:
+            dia_fin = st.number_input("Día final", min_value=1, max_value=31, value=1)
+        with col5:
+            mes_fin = st.number_input("Mes final", min_value=1, max_value=12, value=1)
+        with col6:
+            anio_fin = st.number_input("Año final", value=2024)
+
+        graficar_por_dia(df, opcion, dia_ini, mes_ini, anio_ini, dia_fin, mes_fin, anio_fin)
