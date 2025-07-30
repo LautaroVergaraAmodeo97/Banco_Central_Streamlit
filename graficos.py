@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import streamlit as st
 import plotly.express as px
-
+import plotly.graph_objects as go
 
 def graficar_variable(df, nombre_variable, anio_ini, mes_ini, anio_fin, mes_fin, ylabel):
     try:
