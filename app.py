@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from procesamiento_bcra import obtener_datos_completos
-from graficos import graficar_variable,graficar_por_dia
+from graficos import graficar_variable,graficar_por_dia,graficar_base_monetaria
 
 st.set_page_config(page_title="Visualización BCRA", layout="wide")
 
@@ -49,6 +49,20 @@ if opcion == "Reservas Internacionales":
         mes_final = st.number_input("Mes final", min_value=1, max_value=12, value=12)
 
     graficar_variable(df, opcion, anio_inicio, mes_inicio, anio_final, mes_final, etiquetas[opcion])
+
+elif opcion == "Base Monetaria":
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        anio_inicio = st.number_input("Año inicio", min_value=2000, max_value=2100, value=2023)
+        mes_inicio = st.number_input("Mes inicio", min_value=1, max_value=12, value=1)
+        dia_inicio = st.number_input("Día inicio", min_value=1, max_value=31, value=1)
+    with col2:
+        anio_final = st.number_input("Año final", min_value=2000, max_value=2100, value=2024)
+        mes_final = st.number_input("Mes final", min_value=1, max_value=12, value=12)
+        dia_final = st.number_input("Día final", min_value=1, max_value=31, value=1)
+
+    graficar_base_monetaria(df, opcion, dia_inicio, mes_inicio, anio_inicio, dia_final, mes_final, anio_final, etiquetas[opcion])
+
 
 else:
     col1, col2, col3 = st.columns(3)

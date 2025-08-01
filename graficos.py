@@ -34,14 +34,38 @@ def graficar_variable(df, nombre_variable, anio_ini, mes_ini, anio_fin, mes_fin,
         st.warning("No hay datos en el rango seleccionado.")
         return
 
+
     fig = px.line(df_filtrado, x="fecha", y="valor", title=nombre_variable, labels={"valor": ylabel})
     fig.update_traces(mode="lines")
     fig.update_layout(xaxis_title="Fecha", yaxis_title=ylabel, hovermode="x")
 
+# Crear gráfico con línea y sombreado
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+            x=df_filtrado["fecha"],
+            y=df_filtrado["valor"],
+            mode="lines",  
+            fill='tozeroy',  
+            fillcolor="rgba(0, 123, 255, 0.3)",  
+            line=dict(color="rgb(0, 123, 255)", width=2),
+            name=nombre_variable,
+            hovertemplate="%{x|%d-%m-%Y}<br>Valor: %{y:.2f}<extra></extra>"
+        ))
+
+    fig.update_layout(
+            title=nombre_variable,
+            xaxis_title="Fecha",
+            yaxis_title=ylabel,
+            hovermode="x",
+            template="simple_white"
+        )
+
+
     st.plotly_chart(fig, use_container_width=True)
 
 
-def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final, ylabel):
+def graficar_base_monetaria(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final, ylabel):
 
     fecha_ini = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-{dia_ini:02d}")
     fecha_fin = pd.to_datetime(f"{anio_final}-{mes_final:02d}-{dia_final:02d}")
@@ -64,6 +88,54 @@ def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final,
             name=nombre_variable,
             hovertemplate="%{x|%d-%m-%Y}<br>Valor: %{y:.2f}<extra></extra>"
         ))
+
+    fig.update_layout(
+            title=nombre_variable,
+            xaxis_title="Fecha",
+            yaxis_title=ylabel,
+            hovermode="x",
+            template="simple_white"
+        )
+
+    st.plotly_chart(fig, use_container_width=True)
+    
+def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final, ylabel):
+
+    fecha_ini = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-{dia_ini:02d}")
+    fecha_fin = pd.to_datetime(f"{anio_final}-{mes_final:02d}-{dia_final:02d}")
+
+    df_filtrado = df[(df["fecha"] >= fecha_ini) & (df["fecha"] <= fecha_fin)].copy()
+
+    if df_filtrado.empty:
+        st.warning("No hay datos disponibles en el rango seleccionado.")
+        return
+       # Crear gráfico con línea y sombreado
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+            x=df_filtrado["fecha"],
+            y=df_filtrado["valor"],
+
+            mode="lines",  
+            fill='tozeroy',  
+            fillcolor="rgba(0, 123, 255, 0.3)",  
+
+            mode="lines",      
+
+            line=dict(color="rgb(0, 123, 255)", width=2),
+            name=nombre_variable,
+            hovertemplate="%{x|%d-%m-%Y}<br>Valor: %{y:.2f}<extra></extra>"
+        ))
+
+
+    fig.update_layout(
+            title=nombre_variable,
+            xaxis_title="Fecha",
+            yaxis_title=ylabel,
+            hovermode="x",
+            template="simple_white"
+        )
+
 
     fig.update_layout(
             title=nombre_variable,
