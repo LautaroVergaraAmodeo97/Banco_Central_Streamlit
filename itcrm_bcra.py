@@ -6,308 +6,325 @@ from urllib.parse import urljoin
 import streamlit as st
 import ssl
 import urllib3
+import time
 
 # Deshabilitar warnings SSL para deployment
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-@st.cache_data(ttl=3600)  
+@st.cache_data(ttl=3600)  # Cache por 1 hora
 def itcrm():
     """
-    Versión robusta para deployment en cloud
+    Versión optimizada para Streamlit Cloud
     """
     
     def obtener_link_descarga():
-        """Extrae el link dinámico del Excel con múltiples User-Agents"""
+        """Extrae el link dinámico del Excel - versión cloud optimizada"""
         url_pagina = "https://www.bcra.gob.ar/PublicacionesEstadisticas/Indices_tipo_cambio_multilateral.asp"
         
-        # Múltiples User-Agents para probar
+        # User-Agents optimizados para cloud
         user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ]
         
-        for user_agent in user_agents:
+        for i, user_agent in enumerate(user_agents):
             headers = {
                 'User-Agent': user_agent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept-Encoding': 'gzip, deflate',  # Sin br para mayor compatibilidad
                 'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Cache-Control': 'max-age=0'
+                'DNT': '1',
+                'Upgrade-Insecure-Requests': '1'
             }
             
             try:
-                print(f"🔄 Intentando con User-Agent: {user_agent[:50]}...")
+                # Mostrar progreso solo si estamos en Streamlit
+                try:
+                    if i == 0:
+                        st.info(f"🔍 Buscando datos en BCRA... (intento {i+1})")
+                except:
+                    pass
                 
-                # Crear sesión con configuración robusta
+                # Configuración de sesión más conservadora para cloud
                 session = requests.Session()
                 session.headers.update(headers)
                 
-                response = session.get(
-                    url_pagina, 
-                    timeout=30,  # Timeout más largo para deployment
-                    verify=True,  # Verificar SSL por defecto
-                    allow_redirects=True
-                )
-                response.raise_for_status()
-                
-                print(f"✅ Página obtenida - Status: {response.status_code}")
-                
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                # Buscar el link de descarga con múltiples patrones
-                patterns = [
-                    ['serie histórica', 'xlsx'],
-                    ['serie historica', 'xlsx'],
-                    ['descargar', 'xlsx'],
-                    ['excel', 'descarga'],
-                    ['xlsx'],
-                    ['xls']
-                ]
-                
-                for pattern in patterns:
-                    for link in soup.find_all('a', href=True):
-                        href = link.get('href', '').lower()
-                        text = link.get_text(strip=True).lower()
-                        
-                        # Verificar si el link coincide con el patrón
-                        if all(keyword in text for keyword in pattern) or \
-                           any(ext in href for ext in ['.xlsx', '.xls']):
-                            
-                            full_url = urljoin(url_pagina, link.get('href'))
-                            print(f"🎯 Link encontrado: {full_url}")
-                            return full_url
-                
-            except requests.exceptions.SSLError:
-                print(f"⚠️ Error SSL con {user_agent[:30]}, intentando sin verificación...")
+                # Primer intento con SSL normal
                 try:
-                    # Reintentar sin verificación SSL
                     response = session.get(
                         url_pagina, 
-                        timeout=30,
-                        verify=False,  # Sin verificación SSL
+                        timeout=20,  # Timeout más corto
+                        verify=True,
                         allow_redirects=True
                     )
                     response.raise_for_status()
                     
-                    soup = BeautifulSoup(response.content, 'html.parser')
+                except requests.exceptions.SSLError:
+                    # Segundo intento sin verificación SSL
+                    print("⚠️ Problema SSL, reintentando sin verificación...")
+                    response = session.get(
+                        url_pagina, 
+                        timeout=20,
+                        verify=False,  # Crítico para cloud
+                        allow_redirects=True
+                    )
+                    response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Búsqueda más agresiva de links
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href', '').lower()
+                    text = link.get_text(strip=True).lower()
+                    title = link.get('title', '').lower()
                     
-                    for link in soup.find_all('a', href=True):
-                        href = link.get('href', '').lower()
-                        text = link.get_text(strip=True).lower()
+                    # Múltiples patrones de búsqueda
+                    keywords = [
+                        'serie histórica', 'serie historica', 'histórica', 'historica',
+                        'itcrm', 'multilateral', 'tipo de cambio', 'descargar',
+                        'excel', 'xlsx', 'xls'
+                    ]
+                    
+                    # Verificar en texto, href y title
+                    if any(keyword in text for keyword in keywords) and \
+                       any(ext in href for ext in ['.xlsx', '.xls']) or \
+                       any(keyword in title for keyword in keywords):
                         
-                        if any(keyword in text for keyword in ['serie histórica', 'descargar', 'xlsx']) and \
-                           any(ext in href for ext in ['.xlsx', '.xls']):
-                            
-                            full_url = urljoin(url_pagina, link.get('href'))
-                            return full_url
-                            
-                except Exception as ssl_retry_error:
-                    print(f"❌ Error en retry SSL: {ssl_retry_error}")
-                    continue
-                    
+                        full_url = urljoin(url_pagina, link.get('href'))
+                        print(f"🎯 Link encontrado: {full_url}")
+                        return full_url
+                
+                # Fallback: buscar cualquier link de Excel
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href', '').lower()
+                    if any(ext in href for ext in ['.xlsx', '.xls']):
+                        full_url = urljoin(url_pagina, link.get('href'))
+                        print(f"🎯 Link Excel encontrado (fallback): {full_url}")
+                        return full_url
+                        
             except Exception as e:
-                print(f"❌ Error con User-Agent {user_agent[:30]}: {str(e)[:100]}")
+                print(f"❌ Error con intento {i+1}: {str(e)[:100]}")
+                # Esperar entre intentos
+                if i < len(user_agents) - 1:
+                    time.sleep(2)
                 continue
         
         return None
     
     def descargar_y_procesar_excel(url_descarga):
-        """Descarga robusta del Excel"""
+        """Descarga y procesamiento optimizado para cloud"""
         if not url_descarga:
             return pd.DataFrame()
             
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*',
-            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Referer': 'https://www.bcra.gob.ar/PublicacionesEstadisticas/Indices_tipo_cambio_multilateral.asp',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*',
+            'Accept-Language': 'es-ES,es;q=0.9',
+            'Referer': 'https://www.bcra.gob.ar/',
             'Connection': 'keep-alive'
         }
         
-        max_retries = 3
+        max_retries = 2  # Reducir intentos para cloud
         for attempt in range(max_retries):
             try:
-                print(f"📥 Descargando Excel (intento {attempt + 1}/{max_retries}): {url_descarga}")
+                # Mostrar progreso
+                try:
+                    st.info(f"📥 Descargando archivo... (intento {attempt + 1})")
+                except:
+                    pass
                 
-                response = requests.get(
-                    url_descarga, 
-                    headers=headers, 
-                    timeout=60,  # Timeout más largo
-                    verify=True,
-                    allow_redirects=True,
-                    stream=True  # Para archivos grandes
-                )
-                response.raise_for_status()
+                # Intento con SSL normal primero
+                try:
+                    response = requests.get(
+                        url_descarga, 
+                        headers=headers, 
+                        timeout=30,  # Timeout moderado
+                        verify=True,
+                        allow_redirects=True,
+                        stream=True
+                    )
+                    response.raise_for_status()
+                    
+                except requests.exceptions.SSLError:
+                    # Fallback sin SSL
+                    print("⚠️ SSL error, usando conexión insegura...")
+                    response = requests.get(
+                        url_descarga, 
+                        headers=headers, 
+                        timeout=30,
+                        verify=False,  # Crítico para cloud
+                        allow_redirects=True,
+                        stream=True
+                    )
+                    response.raise_for_status()
                 
-                print(f"✅ Excel descargado - {len(response.content)} bytes")
+                print(f"✅ Archivo descargado - {len(response.content)} bytes")
                 
-                # Procesar Excel
+                # Procesamiento robusto del Excel
                 blob = BytesIO(response.content)
                 
                 try:
+                    # Intentar con openpyxl primero
                     excel_file = pd.ExcelFile(blob, engine='openpyxl')
-                    print(f"📊 Hojas disponibles: {excel_file.sheet_names}")
-                    
-                    # Buscar hoja correcta
-                    target_sheet = excel_file.sheet_names[0]
-                    for sheet_name in excel_file.sheet_names:
-                        sheet_lower = sheet_name.lower()
-                        if any(keyword in sheet_lower for keyword in ['itcrm', 'multilateral', 'bilateral', 'tipo', 'cambio']):
-                            target_sheet = sheet_name
-                            break
-                    
-                    print(f"🎯 Usando hoja: {target_sheet}")
-                    
-                    # Leer datos
-                    df = pd.read_excel(blob, sheet_name=target_sheet, engine='openpyxl')
-                    
-                    # Buscar columnas
-                    fecha_col = None
-                    itcrm_col = None
-                    
-                    for col in df.columns:
-                        col_str = str(col).lower().strip()
-                        if any(keyword in col_str for keyword in ['periodo', 'fecha', 'date', 'time']):
-                            fecha_col = col
-                        if 'itcrm' in col_str:
-                            itcrm_col = col
-                    
-                    if fecha_col is not None and itcrm_col is not None:
-                        # Procesar datos
-                        df_clean = df[[fecha_col, itcrm_col]].copy()
-                        df_clean.columns = ['fecha', 'valor']
-                        
-                        # Limpiar
-                        df_clean['fecha'] = pd.to_datetime(df_clean['fecha'], errors='coerce', dayfirst=True)
-                        df_clean['valor'] = pd.to_numeric(df_clean['valor'], errors='coerce')
-                        df_clean = df_clean.dropna().sort_values('fecha').reset_index(drop=True)
-                        
-                        if len(df_clean) > 0:
-                            print(f"✅ Datos procesados: {len(df_clean)} registros")
-                            print(f"📅 Rango: {df_clean['fecha'].min()} - {df_clean['fecha'].max()}")
-                            return df_clean
-                    
-                    # Fallback: intentar con primeras dos columnas
-                    print("⚠️ Intentando con primeras dos columnas...")
-                    df_fallback = df.iloc[:, [0, 1]].copy()
-                    df_fallback.columns = ['fecha', 'valor']
-                    df_fallback['fecha'] = pd.to_datetime(df_fallback['fecha'], errors='coerce', dayfirst=True, format='mixed')
-                    df_fallback['valor'] = pd.to_numeric(df_fallback['valor'], errors='coerce')
-                    df_fallback = df_fallback.dropna().reset_index(drop=True)
-                    
-                    if len(df_fallback) > 0:
-                        return df_fallback
-                        
-                except Exception as excel_error:
-                    print(f"❌ Error procesando Excel: {excel_error}")
-                    
-            except requests.exceptions.SSLError:
-                print(f"⚠️ Error SSL en descarga, reintentando sin verificación...")
+                except:
+                    try:
+                        # Fallback a xlrd para archivos .xls
+                        blob.seek(0)
+                        excel_file = pd.ExcelFile(blob, engine='xlrd')
+                    except:
+                        print("❌ Error leyendo Excel con ambos engines")
+                        continue
+                
+                print(f"📊 Hojas disponibles: {excel_file.sheet_names}")
+                
+                # Seleccionar hoja correcta
+                target_sheet = excel_file.sheet_names[0]  # Por defecto la primera
+                
+                for sheet_name in excel_file.sheet_names:
+                    sheet_lower = sheet_name.lower()
+                    if any(keyword in sheet_lower for keyword in ['itcrm', 'multilateral', 'serie', 'histórica']):
+                        target_sheet = sheet_name
+                        break
+                
+                print(f"🎯 Procesando hoja: {target_sheet}")
+                
+                # Leer datos con manejo de errores robusto
                 try:
-                    response = requests.get(url_descarga, headers=headers, timeout=60, verify=False)
-                    response.raise_for_status()
-                    # ... resto del procesamiento igual
-                except Exception as ssl_error:
-                    print(f"❌ Error SSL retry: {ssl_error}")
+                    df = pd.read_excel(blob, sheet_name=target_sheet, engine='openpyxl')
+                except:
+                    blob.seek(0)
+                    df = pd.read_excel(blob, sheet_name=target_sheet)
+                
+                # Mostrar primeras filas para debug
+                print("📋 Primeras filas del DataFrame:")
+                print(df.head())
+                print("📋 Columnas disponibles:")
+                print(df.columns.tolist())
+                
+                # Búsqueda inteligente de columnas
+                fecha_col = None
+                itcrm_col = None
+                
+                # Buscar columna de fecha
+                for col in df.columns:
+                    col_str = str(col).lower().strip()
+                    if any(keyword in col_str for keyword in ['periodo', 'fecha', 'date', 'time', 'año', 'mes']):
+                        fecha_col = col
+                        break
+                
+                # Buscar columna ITCRM
+                for col in df.columns:
+                    col_str = str(col).lower().strip()
+                    if 'itcrm' in col_str or 'multilateral' in col_str:
+                        itcrm_col = col
+                        break
+                
+                # Si no encontramos columnas específicas, usar las primeras dos
+                if fecha_col is None or itcrm_col is None:
+                    print("⚠️ Usando primeras dos columnas como fallback")
+                    fecha_col = df.columns[0]
+                    itcrm_col = df.columns[1]
+                
+                print(f"📅 Columna fecha: {fecha_col}")
+                print(f"📊 Columna ITCRM: {itcrm_col}")
+                
+                # Procesar datos
+                df_clean = df[[fecha_col, itcrm_col]].copy()
+                df_clean.columns = ['fecha', 'valor']
+                
+                # Limpiar datos con múltiples formatos de fecha
+                df_clean['fecha'] = pd.to_datetime(
+                    df_clean['fecha'], 
+                    errors='coerce',
+                    infer_datetime_format=True,
+                    dayfirst=True
+                )
+                
+                df_clean['valor'] = pd.to_numeric(df_clean['valor'], errors='coerce')
+                
+                # Eliminar filas vacías y ordenar
+                df_clean = df_clean.dropna().sort_values('fecha').reset_index(drop=True)
+                
+                if len(df_clean) > 0:
+                    print(f"✅ Datos procesados: {len(df_clean)} registros")
+                    print(f"📅 Rango: {df_clean['fecha'].min()} - {df_clean['fecha'].max()}")
+                    print("📊 Últimos valores:")
+                    print(df_clean.tail())
+                    
+                    # Mostrar éxito en Streamlit
+                    try:
+                        st.success(f"✅ {len(df_clean)} registros de ITCRM obtenidos")
+                    except:
+                        pass
+                    
+                    return df_clean
+                else:
+                    print("❌ No hay datos válidos después del procesamiento")
                     
             except Exception as e:
-                print(f"❌ Error en intento {attempt + 1}: {str(e)[:200]}")
+                error_msg = str(e)[:200]
+                print(f"❌ Error en intento {attempt + 1}: {error_msg}")
+                
                 if attempt < max_retries - 1:
-                    import time
-                    time.sleep(5)  # Esperar 5 segundos antes del próximo intento
+                    time.sleep(3)  # Esperar entre intentos
                     
         return pd.DataFrame()
     
-    # Proceso principal con manejo de errores más detallado
+    # Proceso principal con mejor manejo de errores
     try:
-        print("🏛️ Iniciando obtención de ITCRM...")
+        print("🏛️ Iniciando obtención de ITCRM para Streamlit Cloud...")
         
-        # Verificar si estamos en contexto de Streamlit
-        use_streamlit_ui = False
-        status = None
-        
+        # Mostrar estado inicial
         try:
-            # Solo intentar usar Streamlit si estamos en el contexto correcto
-            if hasattr(st, '_get_script_run_ctx') and st._get_script_run_ctx() is not None:
-                status = st.status("Obteniendo datos ITCRM...", expanded=False)
-                use_streamlit_ui = True
+            st.info("🔍 Conectando con BCRA...")
         except:
-            use_streamlit_ui = False
-        
-        if use_streamlit_ui and status is not None:
-            try:
-                st.write("🔍 Buscando link de descarga...")
-            except:
-                pass
+            pass
         
         url_descarga = obtener_link_descarga()
         
         if not url_descarga:
-            if use_streamlit_ui and status is not None:
-                try:
-                    st.write("❌ No se encontró el link de descarga")
-                    status.update(label="Error: Link no encontrado", state="error")
-                except:
-                    pass
             print("❌ No se encontró el link de descarga")
-            return pd.DataFrame(columns=['fecha', 'valor'])
-        
-        if use_streamlit_ui and status is not None:
             try:
-                st.write(f"✅ Link encontrado")
-                st.write("📥 Descargando y procesando Excel...")
+                st.error("❌ No se encontró el archivo de datos en BCRA")
             except:
                 pass
+            return pd.DataFrame(columns=['fecha', 'valor'])
         
         df_resultado = descargar_y_procesar_excel(url_descarga)
         
         if df_resultado.empty:
-            if use_streamlit_ui and status is not None:
-                try:
-                    st.write("❌ No se pudieron procesar los datos")
-                    status.update(label="Error: Datos no disponibles", state="error")
-                except:
-                    pass
             print("❌ No se pudieron procesar los datos")
-            return pd.DataFrame(columns=['fecha', 'valor'])
-        
-        if use_streamlit_ui and status is not None:
             try:
-                st.write(f"✅ {len(df_resultado)} registros obtenidos")
-                status.update(label="ITCRM obtenido correctamente", state="complete")
+                st.error("❌ No se pudieron procesar los datos del ITCRM")
             except:
                 pass
+            return pd.DataFrame(columns=['fecha', 'valor'])
         
-        print(f"✅ ITCRM obtenido: {len(df_resultado)} registros")
+        print(f"✅ ITCRM obtenido exitosamente: {len(df_resultado)} registros")
         return df_resultado
             
     except Exception as e:
-        error_msg = str(e)[:200]
-        print(f"❌ Error general: {error_msg}")
+        error_msg = str(e)
+        print(f"❌ Error crítico: {error_msg}")
         
-        # Solo mostrar error en Streamlit si estamos en ese contexto
         try:
-            st.error(f"Error obteniendo ITCRM: {error_msg}")
+            st.error(f"❌ Error obteniendo ITCRM: {error_msg}")
         except:
-            pass  # Ignorar si no estamos en Streamlit
+            pass
             
         return pd.DataFrame(columns=['fecha', 'valor'])
 
-# Test independiente
+# Test función
 if __name__ == "__main__":
-    print("🧪 Test de ITCRM para deployment...")
+    print("🧪 Test de ITCRM optimizado para cloud...")
     df = itcrm()
     
     if not df.empty:
         print(f"✅ Test exitoso: {len(df)} registros")
+        print("📊 Muestra de datos:")
+        print(df.head())
         print(df.tail())
     else:
-        print("❌ Test falló")
+        print("❌ Test falló - DataFrame vacío")
