@@ -95,8 +95,7 @@ elif opcion == "Base Monetaria":
                             dia_final, mes_final, anio_final, etiquetas[opcion])
 
 else:
-    # ✅ CASOS GENERALES: Tipo de Cambio Minorista, Mayorista, Baibar
-    # (ITCRM ya fue manejado arriba, NO entra aquí)
+   
     id_indicador = ids[opcion]
     df = obtener_datos_completos(id_indicador)
     
