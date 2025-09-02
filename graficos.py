@@ -148,7 +148,7 @@ def graficar_itcrm(df, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_fi
         x=df_filtrado["fecha"],
         y=df_filtrado["valor"],
         mode="lines",  
-        line=dict(color="rgb(255, 87, 34)", width=2),  # Color naranja distintivo para ITCRM
+        line=dict(color="rgb(0, 123, 255)", width=2), 
         name="ITCRM",
         hovertemplate="%{x|%d-%m-%Y}<br>ITCRM: %{y:.2f}<extra></extra>"
     ))
