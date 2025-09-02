@@ -13,12 +13,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 @st.cache_data(ttl=3600)  # Cache por 1 hora
 def itcrm():
-    """
-    Versión optimizada para Streamlit Cloud
-    """
-    
+  
     def obtener_link_descarga():
-        """Extrae el link dinámico del Excel - versión cloud optimizada"""
+        
         url_pagina = "https://www.bcra.gob.ar/PublicacionesEstadisticas/Indices_tipo_cambio_multilateral.asp"
         
         # User-Agents optimizados para cloud
@@ -33,14 +30,14 @@ def itcrm():
                 'User-Agent': user_agent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate',  # Sin br para mayor compatibilidad
+                'Accept-Encoding': 'gzip, deflate',  
                 'Connection': 'keep-alive',
                 'DNT': '1',
                 'Upgrade-Insecure-Requests': '1'
             }
             
             try:
-                # Mostrar progreso solo si estamos en Streamlit
+                
                 try:
                     if i == 0:
                         st.info(f"🔍 Buscando datos en BCRA... (intento {i+1})")
@@ -93,7 +90,7 @@ def itcrm():
                        any(keyword in title for keyword in keywords):
                         
                         full_url = urljoin(url_pagina, link.get('href'))
-                        print(f"🎯 Link encontrado: {full_url}")
+                        print(f" Link encontrado: {full_url}")
                         return full_url
                 
                 # Fallback: buscar cualquier link de Excel
@@ -105,7 +102,7 @@ def itcrm():
                         return full_url
                         
             except Exception as e:
-                print(f"❌ Error con intento {i+1}: {str(e)[:100]}")
+                print(f" Error con intento {i+1}: {str(e)[:100]}")
                 # Esperar entre intentos
                 if i < len(user_agents) - 1:
                     time.sleep(2)
@@ -114,7 +111,7 @@ def itcrm():
         return None
     
     def descargar_y_procesar_excel(url_descarga):
-        """Descarga y procesamiento optimizado para cloud"""
+        
         if not url_descarga:
             return pd.DataFrame()
             
@@ -131,7 +128,7 @@ def itcrm():
             try:
                 # Mostrar progreso
                 try:
-                    st.info(f"📥 Descargando archivo... (intento {attempt + 1})")
+                    st.info(f"Descargando archivo... (intento {attempt + 1})")
                 except:
                     pass
                 
@@ -149,7 +146,7 @@ def itcrm():
                     
                 except requests.exceptions.SSLError:
                     # Fallback sin SSL
-                    print("⚠️ SSL error, usando conexión insegura...")
+                    print(" SSL error")
                     response = requests.get(
                         url_descarga, 
                         headers=headers, 
@@ -160,7 +157,7 @@ def itcrm():
                     )
                     response.raise_for_status()
                 
-                print(f"✅ Archivo descargado - {len(response.content)} bytes")
+                print(f" Archivo descargado - {len(response.content)} bytes")
                 
                 # Procesamiento robusto del Excel
                 blob = BytesIO(response.content)
@@ -174,7 +171,7 @@ def itcrm():
                         blob.seek(0)
                         excel_file = pd.ExcelFile(blob, engine='xlrd')
                     except:
-                        print("❌ Error leyendo Excel con ambos engines")
+                        print(" Error leyendo Excel con ambos engines")
                         continue
                 
                 print(f"📊 Hojas disponibles: {excel_file.sheet_names}")
@@ -188,7 +185,7 @@ def itcrm():
                         target_sheet = sheet_name
                         break
                 
-                print(f"🎯 Procesando hoja: {target_sheet}")
+                print(f" Procesando hoja: {target_sheet}")
                 
                 # Leer datos con manejo de errores robusto
                 try:
@@ -223,12 +220,12 @@ def itcrm():
                 
                 # Si no encontramos columnas específicas, usar las primeras dos
                 if fecha_col is None or itcrm_col is None:
-                    print("⚠️ Usando primeras dos columnas como fallback")
+                    print(" Usando primeras dos columnas como fallback")
                     fecha_col = df.columns[0]
                     itcrm_col = df.columns[1]
                 
-                print(f"📅 Columna fecha: {fecha_col}")
-                print(f"📊 Columna ITCRM: {itcrm_col}")
+                print(f"Columna fecha: {fecha_col}")
+                print(f"Columna ITCRM: {itcrm_col}")
                 
                 # Procesar datos
                 df_clean = df[[fecha_col, itcrm_col]].copy()
@@ -248,9 +245,9 @@ def itcrm():
                 df_clean = df_clean.dropna().sort_values('fecha').reset_index(drop=True)
                 
                 if len(df_clean) > 0:
-                    print(f"✅ Datos procesados: {len(df_clean)} registros")
-                    print(f"📅 Rango: {df_clean['fecha'].min()} - {df_clean['fecha'].max()}")
-                    print("📊 Últimos valores:")
+                    print(f"Datos procesados: {len(df_clean)} registros")
+                    print(f"Rango: {df_clean['fecha'].min()} - {df_clean['fecha'].max()}")
+                    print("Últimos valores:")
                     print(df_clean.tail())
                     
                     # Mostrar éxito en Streamlit
@@ -261,11 +258,11 @@ def itcrm():
                     
                     return df_clean
                 else:
-                    print("❌ No hay datos válidos después del procesamiento")
+                    print("No hay datos válidos después del procesamiento")
                     
             except Exception as e:
                 error_msg = str(e)[:200]
-                print(f"❌ Error en intento {attempt + 1}: {error_msg}")
+                print(f"Error en intento {attempt + 1}: {error_msg}")
                 
                 if attempt < max_retries - 1:
                     time.sleep(3)  # Esperar entre intentos
@@ -274,20 +271,20 @@ def itcrm():
     
     # Proceso principal con mejor manejo de errores
     try:
-        print("🏛️ Iniciando obtención de ITCRM para Streamlit Cloud...")
+        print("Iniciando obtención de ITCRM para Streamlit Cloud...")
         
         # Mostrar estado inicial
         try:
-            st.info("🔍 Conectando con BCRA...")
+            st.info("Conectando con BCRA...")
         except:
             pass
         
         url_descarga = obtener_link_descarga()
         
         if not url_descarga:
-            print("❌ No se encontró el link de descarga")
+            print("No se encontró el link de descarga")
             try:
-                st.error("❌ No se encontró el archivo de datos en BCRA")
+                st.error("No se encontró el archivo de datos en BCRA")
             except:
                 pass
             return pd.DataFrame(columns=['fecha', 'valor'])
@@ -295,22 +292,22 @@ def itcrm():
         df_resultado = descargar_y_procesar_excel(url_descarga)
         
         if df_resultado.empty:
-            print("❌ No se pudieron procesar los datos")
+            print("No se pudieron procesar los datos")
             try:
-                st.error("❌ No se pudieron procesar los datos del ITCRM")
+                st.error("No se pudieron procesar los datos del ITCRM")
             except:
                 pass
             return pd.DataFrame(columns=['fecha', 'valor'])
         
-        print(f"✅ ITCRM obtenido exitosamente: {len(df_resultado)} registros")
+        print(f"ITCRM obtenido exitosamente: {len(df_resultado)} registros")
         return df_resultado
             
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Error crítico: {error_msg}")
+        print(f"Error crítico: {error_msg}")
         
         try:
-            st.error(f"❌ Error obteniendo ITCRM: {error_msg}")
+            st.error(f"Error obteniendo ITCRM: {error_msg}")
         except:
             pass
             
@@ -318,13 +315,13 @@ def itcrm():
 
 # Test función
 if __name__ == "__main__":
-    print("🧪 Test de ITCRM optimizado para cloud...")
+    print("Test de ITCRM optimizado para cloud...")
     df = itcrm()
     
     if not df.empty:
-        print(f"✅ Test exitoso: {len(df)} registros")
-        print("📊 Muestra de datos:")
+        print(f"Test exitoso: {len(df)} registros")
+        print("Muestra de datos:")
         print(df.head())
         print(df.tail())
     else:
-        print("❌ Test falló - DataFrame vacío")
+        print("Test falló - DataFrame vacío")
