@@ -129,3 +129,66 @@ def graficar_por_dia(df, nombre_variable, dia_ini, mes_ini, anio_ini, dia_final,
     )
 
     st.plotly_chart(fig, use_container_width=True)
+    
+    
+def graficar_itcrm(df, dia_ini, mes_ini, anio_ini, dia_final, mes_final, anio_final):
+   
+    fecha_ini = pd.to_datetime(f"{anio_ini}-{mes_ini:02d}-{dia_ini:02d}")
+    fecha_fin = pd.to_datetime(f"{anio_final}-{mes_final:02d}-{dia_final:02d}")
+
+    df_filtrado = df[(df["fecha"] >= fecha_ini) & (df["fecha"] <= fecha_fin)].copy()
+
+    if df_filtrado.empty:
+        st.warning("No hay datos de ITCRM disponibles en el rango seleccionado.")
+        return
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df_filtrado["fecha"],
+        y=df_filtrado["valor"],
+        mode="lines",  
+        line=dict(color="rgb(255, 87, 34)", width=2),  # Color naranja distintivo para ITCRM
+        name="ITCRM",
+        hovertemplate="%{x|%d-%m-%Y}<br>ITCRM: %{y:.2f}<extra></extra>"
+    ))
+
+    fig.update_layout(
+        title="Índice de Tipo de Cambio Real Multilateral (ITCRM)",
+        xaxis_title="Fecha",
+        yaxis_title="Índice (Base 17-12-15=100)",
+        hovermode="x",
+        template="simple_white"
+    )
+
+    st.plotly_chart(fig, use_container_width=True, key="grafico_itcrm_unico")
+    
+  
+    #if not df_filtrado.empty:
+    #    col1, col2, col3 = st.columns(3)
+        
+    #    with col1:
+    #        valor_actual = df_filtrado["valor"].iloc[-1]
+    #        st.metric("Valor Actual", f"{valor_actual:.2f}")
+        
+    #    with col2:
+    #        valor_max = df_filtrado["valor"].max()
+    #        st.metric("Máximo del Período", f"{valor_max:.2f}")
+            
+    #    with col3:
+    #        valor_min = df_filtrado["valor"].min()
+    #        st.metric("Mínimo del Período", f"{valor_min:.2f}")
+        
+     
+        #with st.expander("ℹ️ ¿Qué significa el ITCRM?"):
+        #    st.info("""
+        #    **Índice de Tipo de Cambio Real Multilateral (ITCRM)**
+            
+        #    - **Base**: 17 de diciembre de 2015 = 100
+        #    - **Interpretación**:
+        #      - ↗️ **Aumento**: Pérdida de competitividad de productos argentinos
+        #      - ↘️ **Disminución**: Ganancia de competitividad de productos argentinos
+            
+        #    - **Actualización**: Diaria a las 15:00 hs por el BCRA
+        #    - **Fuente**: Banco Central de la República Argentina
+        #    """)
