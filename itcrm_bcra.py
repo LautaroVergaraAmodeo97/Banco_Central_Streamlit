@@ -40,7 +40,7 @@ def itcrm():
                 
                 try:
                     if i == 0:
-                        st.info(f"🔍 Buscando datos en BCRA... (intento {i+1})")
+                        st.info(f"Buscando datos en BCRA (intento {i+1})")
                 except:
                     pass
                 
