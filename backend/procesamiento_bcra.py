@@ -4,7 +4,7 @@ from api_client import obtener_datos_api
 
 # Diccionario que relaciona el ID del indicador con el nombre del CSV histórico
 archivos = {
-    1: "reservas_completas.csv", #Estaba data_vieja.csv
+    1: "data_vieja.csv",
     4: "tipo_cambio_minorista.csv",
     5: "tipo_cambio_mayorista.csv",
     11: "df_baibar.csv",
