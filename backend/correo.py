@@ -1,92 +1,111 @@
-from fastapi import APIRouter, HTTPException
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
-from pydantic import EmailStr, BaseModel
-from typing import List
-from dotenv import load_dotenv
-import os
+"""
+Formulario de contacto: envía el mensaje por correo al dueño del sitio.
 
-# Cargar variables de entorno
-load_dotenv()
+Protecciones: validación y largo máximo de cada campo, campo trampa contra
+bots, límite de envíos por IP y errores genéricos (el detalle queda en el log).
+"""
 
-# IMPORTANTE: No pongas tu email y contraseña directamente en el código
-# Usa variables de entorno
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME", "lautarovergaramodeo@gmail.com"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),  
-    MAIL_FROM=os.getenv("MAIL_FROM", "lautarovergaramodeo@gmail.com"),
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
-)
+import logging
+import time
+from collections import defaultdict, deque
+from html import escape
 
+from fastapi import APIRouter, HTTPException, Request
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
+from pydantic import BaseModel, EmailStr, Field
+
+import config
+
+log = logging.getLogger("contacto")
 router = APIRouter()
 
-# Modelo para el formulario de contacto
+MAX_ENVIOS = 3
+VENTANA_SEGUNDOS = 10 * 60
+_envios_por_ip = defaultdict(deque)
+
+
 class ContactoFormulario(BaseModel):
-    nombre: str
+    nombre: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    asunto: str
-    mensaje: str
+    asunto: str = Field(min_length=1, max_length=150)
+    mensaje: str = Field(min_length=1, max_length=5000)
+    # Campo trampa: invisible para personas, los bots suelen completarlo
+    sitio_web: str = Field(default="", max_length=200)
+
+
+def _ip_cliente(request: Request):
+    ip = request.client.host if request.client else "desconocida"
+    reenviada = request.headers.get("x-forwarded-for")
+    if reenviada and ip in config.PROXIES_CONFIABLES:
+        return reenviada.split(",")[0].strip()
+    return ip
+
+
+def _supero_limite(ip):
+    ahora = time.monotonic()
+    envios = _envios_por_ip[ip]
+    while envios and ahora - envios[0] > VENTANA_SEGUNDOS:
+        envios.popleft()
+    if len(envios) >= MAX_ENVIOS:
+        return True
+    envios.append(ahora)
+    return False
+
 
 @router.post("/contacto/enviar")
-async def enviar_email_contacto(formulario: ContactoFormulario):
-    """
-    Endpoint para enviar emails desde el formulario de contacto
-    """
-    try:
-        # Crear mensaje HTML
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2 style="color: #2563eb;">Nuevo mensaje de contacto - BCRA Dashboard</h2>
-                
-                <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <p><strong>Nombre:</strong> {formulario.nombre}</p>
-                    <p><strong>Email:</strong> {formulario.email}</p>
-                    <p><strong>Asunto:</strong> {formulario.asunto}</p>
-                </div>
-                
-                <div style="background-color: #ffffff; padding: 20px; border-left: 4px solid #2563eb;">
-                    <h3>Mensaje:</h3>
-                    <p>{formulario.mensaje}</p>
-                </div>
-                
-                <hr style="margin: 30px 0;">
-                
-                <p style="color: #6b7280; font-size: 12px;">
-                    Este mensaje fue enviado desde el formulario de contacto del Dashboard BCRA
-                </p>
-            </body>
-        </html>
-        """
-        
-        # Configurar mensaje
-        mensaje = MessageSchema(
-            subject=f"[BCRA Dashboard] {formulario.asunto}",
-            recipients=["lautarovergaramodeo@gmail.com"],  # Tu email donde recibirás los mensajes
-            body=html_content,
-            subtype="html"
-        )
-        
-        # Enviar email
-        fm = FastMail(conf)
-        await fm.send_message(mensaje)
-        
-        return {
-            "success": True,
-            "message": "Correo enviado correctamente"
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al enviar el correo: {str(e)}"
-        )
-    
+async def enviar_email_contacto(formulario: ContactoFormulario, request: Request):
+    if formulario.sitio_web:
+        return {"success": True, "message": "Correo enviado correctamente"}
 
-print("🔍 DEBUG - Variables de entorno:")
-print(f"MAIL_USERNAME: {os.getenv('MAIL_USERNAME')}")
-print(f"MAIL_PASSWORD: {'***' if os.getenv('MAIL_PASSWORD') else 'NO CONFIGURADA'}")
+    if not config.CORREO_CONFIGURADO:
+        raise HTTPException(503, "El formulario de contacto no está disponible en este momento.")
+
+    if _supero_limite(_ip_cliente(request)):
+        raise HTTPException(429, "Enviaste varios mensajes seguidos. Probá de nuevo en unos minutos.")
+
+    # Sin saltos de línea en el asunto: evita inyectar cabeceras de correo
+    asunto = " ".join(formulario.asunto.split())
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #1d4ed8;">Nuevo mensaje de contacto - Prognosis</h2>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Nombre:</strong> {escape(formulario.nombre)}</p>
+                <p><strong>Email:</strong> {escape(str(formulario.email))}</p>
+                <p><strong>Asunto:</strong> {escape(asunto)}</p>
+            </div>
+            <div style="background-color: #ffffff; padding: 20px; border-left: 4px solid #1d4ed8;">
+                <h3>Mensaje:</h3>
+                <p style="white-space: pre-line">{escape(formulario.mensaje)}</p>
+            </div>
+            <p style="color: #6b7280; font-size: 12px;">Enviado desde el formulario de contacto de Prognosis</p>
+        </body>
+    </html>
+    """
+
+    mensaje = MessageSchema(
+        subject=f"[Prognosis] {asunto}",
+        recipients=[config.MAIL_TO],
+        reply_to=[formulario.email],
+        body=html_content,
+        subtype="html",
+    )
+    conexion = ConnectionConfig(
+        MAIL_USERNAME=config.MAIL_USERNAME,
+        MAIL_PASSWORD=config.MAIL_PASSWORD,
+        MAIL_FROM=config.MAIL_FROM,
+        MAIL_PORT=config.MAIL_PORT,
+        MAIL_SERVER=config.MAIL_SERVER,
+        MAIL_STARTTLS=True,
+        MAIL_SSL_TLS=False,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True,
+    )
+
+    try:
+        await FastMail(conexion).send_message(mensaje)
+    except Exception:
+        log.exception("No se pudo enviar el correo de contacto")
+        raise HTTPException(502, "No se pudo enviar el mensaje. Probá de nuevo más tarde.")
+
+    return {"success": True, "message": "Correo enviado correctamente"}
