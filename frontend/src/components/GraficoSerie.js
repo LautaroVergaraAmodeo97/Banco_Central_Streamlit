@@ -4,6 +4,7 @@
 
 'use client'
 
+import { useId } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatearCompacto, formatearFecha, formatearValor, reducirPuntos } from '@/lib/formato'
 
@@ -22,6 +23,10 @@ function TooltipSerie({ active, payload, unidad, mensual }) {
 }
 
 export default function GraficoSerie({ datos, color, unidad, mensual = false }) {
+  // Cada gráfico necesita su propio id de degradado: si dos comparten el mismo,
+  // el navegador usa el primero y el segundo se pinta con el color equivocado
+  const idRelleno = `relleno-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+
   if (!datos.length) {
     return (
       <div className="h-80 grid place-items-center rounded-lg border border-dashed border-border text-muted">
@@ -42,7 +47,7 @@ export default function GraficoSerie({ datos, color, unidad, mensual = false }) 
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={puntos} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id="relleno-serie" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={idRelleno} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity={0.3} />
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
@@ -73,7 +78,7 @@ export default function GraficoSerie({ datos, color, unidad, mensual = false }) 
             dataKey="valor"
             stroke={color}
             strokeWidth={2}
-            fill="url(#relleno-serie)"
+            fill={`url(#${idRelleno})`}
             activeDot={{ r: 4, strokeWidth: 0 }}
             animationDuration={400}
           />

@@ -46,10 +46,13 @@ function nombreMes(mes) {
   return `${MESES[m - 1]} de ${a}`
 }
 
-/** Acepta "1.500,75", "1500.75" o "1500" */
+/** Acepta "1.500,75", "1.500", "1.000.000", "1500.75" o "1500" */
 function parsearMonto(texto) {
   const limpio = texto.trim().replace(/\$/g, '').replace(/\s/g, '')
-  const normalizado = limpio.includes(',') ? limpio.replace(/\./g, '').replace(',', '.') : limpio
+  // Formato argentino: el punto separa miles y la coma los decimales. Sin coma,
+  // un punto seguido de grupos de 3 dígitos también es de miles ("1.500" = 1500)
+  const conMiles = limpio.includes(',') || /^-?\d{1,3}(\.\d{3})+$/.test(limpio)
+  const normalizado = conMiles ? limpio.replace(/\./g, '').replace(',', '.') : limpio
   const n = Number(normalizado)
   return normalizado !== '' && Number.isFinite(n) ? n : null
 }

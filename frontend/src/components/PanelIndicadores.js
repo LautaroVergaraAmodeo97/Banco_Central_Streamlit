@@ -62,6 +62,9 @@ export default function PanelIndicadores({ resumen, errorResumen }) {
       .catch((e) => setErroresSerie((prev) => ({ ...prev, [seleccion]: e.message })))
   }, [seleccion, series, erroresSerie])
 
+  // Fecha más reciente entre los indicadores que sí trajeron datos
+  const ultimaActualizacion = resumen?.map((i) => i.ultima_fecha).filter(Boolean).sort().at(-1)
+
   const serie = series[seleccion]
   const errorSerie = erroresSerie[seleccion]
   const meta = resumen?.find((i) => i.id === seleccion) ?? serie
@@ -111,10 +114,8 @@ export default function PanelIndicadores({ resumen, errorResumen }) {
             Series oficiales actualizadas cada día. Elegí un indicador para ver su evolución.
           </p>
         </div>
-        {resumen?.length > 0 && (
-          <p className="text-sm text-muted">
-            Actualizado el {formatearFecha(resumen.map((i) => i.ultima_fecha).filter(Boolean).sort().at(-1))}
-          </p>
+        {ultimaActualizacion && (
+          <p className="text-sm text-muted">Actualizado el {formatearFecha(ultimaActualizacion)}</p>
         )}
       </div>
 

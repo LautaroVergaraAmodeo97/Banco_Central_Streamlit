@@ -37,12 +37,18 @@ def _ip_cliente(request: Request):
     ip = request.client.host if request.client else "desconocida"
     reenviada = request.headers.get("x-forwarded-for")
     if reenviada and ip in config.PROXIES_CONFIABLES:
-        return reenviada.split(",")[0].strip()
+        # El proxy agrega la IP real AL FINAL; los valores anteriores los
+        # puede inventar el visitante, así que no se usan
+        return reenviada.split(",")[-1].strip()
     return ip
 
 
 def _supero_limite(ip):
     ahora = time.monotonic()
+    # Olvida las IPs sin envíos recientes para que el registro no crezca sin fin
+    for otra in [i for i, e in _envios_por_ip.items() if not e or ahora - e[-1] > VENTANA_SEGUNDOS]:
+        del _envios_por_ip[otra]
+
     envios = _envios_por_ip[ip]
     while envios and ahora - envios[0] > VENTANA_SEGUNDOS:
         envios.popleft()

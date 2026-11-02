@@ -134,7 +134,9 @@ def _construir_serie(slug):
         desde = (historico["fecha"].max() + timedelta(days=1)).date()
         nuevos = _descargar_api(meta["id_bcra"], desde)
         df = pd.concat([historico, nuevos], ignore_index=True) if not nuevos.empty else historico
-    except requests.RequestException as e:
+    # Además de los errores de red, una respuesta con formato inesperado
+    # (HTML de error, JSON sin los campos esperados) también cae al histórico
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as e:
         print(f"[{slug}] API del BCRA no disponible, se usa solo el histórico: {e}")
         aviso = "La API del BCRA no respondió: se muestran solo datos históricos."
         df = historico
