@@ -34,6 +34,9 @@ class ContactoFormulario(BaseModel):
 
 
 def _ip_cliente(request: Request):
+    if config.EN_VERCEL and request.headers.get("x-real-ip"):
+        return request.headers["x-real-ip"]
+
     ip = request.client.host if request.client else "desconocida"
     reenviada = request.headers.get("x-forwarded-for")
     if reenviada and ip in config.PROXIES_CONFIABLES:

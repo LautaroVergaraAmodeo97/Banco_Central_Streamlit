@@ -20,6 +20,10 @@ def _lista(nombre, defecto=""):
 ENTORNO = os.getenv("ENTORNO", "desarrollo").lower()
 EN_PRODUCCION = ENTORNO == "produccion"
 
+# Vercel define VERCEL=1 en sus funciones y pone la IP real del visitante en
+# la cabecera x-real-ip, que el visitante no puede falsificar
+EN_VERCEL = os.getenv("VERCEL") == "1"
+
 # Orígenes del frontend autorizados por CORS
 FRONTEND_ORIGINS = _lista("FRONTEND_ORIGINS", "http://localhost:3000")
 

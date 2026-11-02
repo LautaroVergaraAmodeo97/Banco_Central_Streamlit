@@ -18,11 +18,14 @@ export default function Navbar() {
   const pathname = usePathname()
 
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur">
+    // Barra siempre oscura: es el fondo del logo de Prognosis, en modo claro y oscuro
+    <header className="sticky top-0 z-10 border-b border-white/10 bg-marca-fondo/95 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <span className="grid place-items-center w-8 h-8 rounded-lg bg-accent text-white font-bold">P</span>
-          <span className="font-semibold tracking-tight text-lg">Prognosis</span>
+        <Link href="/" aria-label="Prognosis, inicio" className="flex flex-col shrink-0 leading-none">
+          <span className="w-fit texto-marca font-marca font-bold text-xl sm:text-2xl tracking-wider">PROGNOSIS</span>
+          <span className="hidden sm:block mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-[#b2e0f8]">
+            Data, tecnología de predicción &amp; insights
+          </span>
         </Link>
 
         <nav aria-label="Principal" className="flex flex-wrap items-center gap-1">
@@ -30,7 +33,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="px-2.5 sm:px-3 py-2.5 rounded-md text-sm font-medium whitespace-nowrap text-muted hover:text-text hover:bg-surface-2"
+              className="px-2.5 sm:px-3 py-2.5 rounded-md text-sm font-medium whitespace-nowrap text-[#b2e0f8] hover:text-white hover:bg-white/10"
             >
               {link.label}
             </Link>
@@ -38,7 +41,7 @@ export default function Navbar() {
           <Link
             href="/contacto"
             aria-current={pathname === '/contacto' ? 'page' : undefined}
-            className="ml-1 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap bg-accent text-white hover:opacity-90"
+            className="ml-1 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-marca-fondo bg-linear-to-r from-[#0b8bff] to-[#13f2a1] hover:opacity-90"
           >
             Contacto
           </Link>

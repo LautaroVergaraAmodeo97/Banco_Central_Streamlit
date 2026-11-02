@@ -2,20 +2,22 @@
  * Layout compartido - Aplica a todas las páginas
  */
 
-import { Inter } from 'next/font/google'
+import { Inter, Orbitron } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+// Tipografía del logo: solo para la marca, no para textos
+const orbitron = Orbitron({ subsets: ['latin'], weight: ['700'], variable: '--font-orbitron' })
 
 export const metadata = {
   title: 'Prognosis · Indicadores BCRA',
-  description: 'Dashboard de indicadores económicos del Banco Central de la República Argentina',
+  description: 'Data, tecnología de predicción e insights: indicadores económicos del Banco Central de la República Argentina',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={inter.variable}>
+    <html lang="es" className={`${inter.variable} ${orbitron.variable}`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
         <Navbar />
 

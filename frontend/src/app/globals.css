@@ -48,6 +48,16 @@
   --color-neg: var(--neg);
   --color-neg-soft: var(--neg-soft);
   --font-sans: var(--font-inter);
+  --font-marca: var(--font-orbitron);
+  --color-marca-fondo: #010d1d;
+}
+
+/* Degradado del logo de Prognosis (azul → turquesa → verde) */
+.texto-marca {
+  background: linear-gradient(90deg, #0b8bff 0%, #16c9de 50%, #13f2a1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 html {
