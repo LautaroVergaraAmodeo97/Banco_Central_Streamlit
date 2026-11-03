@@ -8,6 +8,7 @@ import Link from 'next/link'
 import Hero from '@/components/Hero'
 import LecturaDelDia from '@/components/LecturaDelDia'
 import Nosotros from '@/components/Nosotros'
+import QuienSoy from '@/components/QuienSoy'
 import { useResumenBCRA, useResumenIndec } from '@/lib/datos'
 
 const HERRAMIENTAS = [
@@ -55,6 +56,7 @@ export default function Inicio() {
       </section>
 
       <Nosotros />
+      <QuienSoy />
     </>
   )
 }

@@ -35,6 +35,10 @@ class TokenFaltante(Exception):
     pass
 
 
+class FiltroInvalido(Exception):
+    """La API del INDEC rechazó un filtro (por ejemplo, texto en una columna numérica)."""
+
+
 class DemasiadasFilas(Exception):
     def __init__(self, total):
         super().__init__(f"La consulta devuelve {total} filas (máximo {MAX_FILAS}). Agregá filtros.")
@@ -46,6 +50,8 @@ def _pedir(tabla, params, contar=False):
     if contar:
         headers["Prefer"] = "count=exact"
     res = requests.get(API_URL.format(tabla=tabla), params=params, headers=headers, timeout=60, verify=certifi.where())
+    if res.status_code == 400:
+        raise FiltroInvalido(res.text[:200])
     res.raise_for_status()
     total = None
     if contar and "/" in res.headers.get("Content-Range", ""):

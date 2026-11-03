@@ -53,13 +53,12 @@ export default function PanelSeriesIndec() {
 
   return (
     <div>
-      <div role="tablist" aria-label="Temas" className="flex flex-wrap gap-1 border border-border p-1">
+      <div role="group" aria-label="Temas" className="flex flex-wrap gap-1 border border-border p-1">
         {(grupos.length ? grupos : ['Precios']).map((g) => (
           <button
             key={g}
             type="button"
-            role="tab"
-            aria-selected={g === grupo}
+            aria-pressed={g === grupo}
             onClick={() => resumen && elegirGrupo(g)}
             className={`px-3 py-1.5 font-display text-[15px] font-medium ${g === grupo ? 'bg-accent text-on-accent' : 'text-muted hover:text-text'}`}
           >

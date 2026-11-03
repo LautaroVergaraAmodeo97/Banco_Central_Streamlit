@@ -6,6 +6,8 @@ import { Chakra_Petch, IBM_Plex_Mono, IBM_Plex_Sans, Orbitron } from 'next/font/
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import Marca from '@/components/Marca'
+import RedesSociales from '@/components/RedesSociales'
+import { PERFIL } from '@/lib/perfil'
 
 const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex-sans' })
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono' })
@@ -30,9 +32,14 @@ export default function RootLayout({ children }) {
 
         <footer className="border-t border-border">
           <div className="contenedor flex flex-wrap items-end justify-between gap-6 py-8">
-            <Marca />
+            <div className="flex flex-col gap-4">
+              <Marca />
+              <RedesSociales />
+            </div>
             <p className="cifra max-w-md text-[12px] text-muted sm:text-right">
-              Fuentes: Banco Central de la República Argentina e INDEC. © Prognosis
+              Fuentes: Banco Central de la República Argentina e INDEC.
+              <br />
+              © Prognosis · {PERFIL.nombre}
             </p>
           </div>
         </footer>

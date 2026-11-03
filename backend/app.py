@@ -16,11 +16,20 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 import config
-from correo import router as router_correo
+from correo import _ip_cliente, router as router_correo
 import indec
+from limite import LimitePorIP
 from indicadores import INDICADORES, obtener_serie
 
 log = logging.getLogger("api")
+
+# Consultas que llegan a la API del INDEC con el token personal: 60 por minuto por IP
+limite_indec = LimitePorIP(maximo=60, ventana_segundos=60)
+
+
+def _controlar_limite(request: Request):
+    if limite_indec.excedido(_ip_cliente(request)):
+        raise HTTPException(429, "Hiciste muchas consultas seguidas. Esperá un minuto y probá de nuevo.")
 
 # En producción no se publica la documentación interactiva
 app = FastAPI(
@@ -134,6 +143,8 @@ def _desde_indec(funcion, *args, contexto=""):
         raise HTTPException(503, "Los datos del INDEC no están disponibles: falta configurar el token.")
     except indec.DemasiadasFilas as e:
         raise HTTPException(413, str(e))
+    except indec.FiltroInvalido:
+        raise HTTPException(400, "Algún filtro tiene un valor que no corresponde a esa columna.")
     except Exception:
         log.exception("[indec:%s] Error al consultar la API del INDEC", contexto)
         raise HTTPException(502, "No se pudieron obtener los datos del INDEC. Probá de nuevo más tarde.")
@@ -178,16 +189,18 @@ def serie_indec(id_serie: str):
 
 
 @app.get("/api/indec/comercio/{anio}")
-def comercio_indec(anio: int):
+def comercio_indec(anio: int, request: Request):
     """Exportaciones e importaciones de un año, agregadas por mes, rubro y país."""
+    _controlar_limite(request)
     if not 1986 <= anio <= date.today().year:
         raise HTTPException(400, "El año debe estar entre 1986 y el actual.")
     return _desde_indec(indec.comercio, anio, contexto=f"comercio-{anio}")
 
 
 @app.get("/api/indec/{tabla}/dimensiones")
-def dimensiones_indec(tabla: str):
+def dimensiones_indec(tabla: str, request: Request):
     """Valores posibles de cada columna de categorías, para armar filtros en el explorador."""
+    _controlar_limite(request)
     if tabla not in indec.CATALOGO:
         raise HTTPException(404, f"Tabla del INDEC desconocida: {tabla}")
     return _desde_indec(indec.dimensiones, tabla, contexto=f"{tabla}-dimensiones")
@@ -196,6 +209,7 @@ def dimensiones_indec(tabla: str):
 @app.get("/api/indec/{tabla}")
 def tabla_indec(tabla: str, request: Request):
     """Filas de una tabla del INDEC. Cada parámetro de la URL filtra por igualdad una columna."""
+    _controlar_limite(request)
     if tabla not in indec.CATALOGO:
         raise HTTPException(404, f"Tabla del INDEC desconocida: {tabla}")
     columnas = indec.CATALOGO[tabla]["columnas"]
