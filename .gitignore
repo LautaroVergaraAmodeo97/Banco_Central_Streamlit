@@ -13,3 +13,18 @@ __pycache__/
 .devcontainer/
 .vscode/
 
+
+# Secretos: nunca se suben (usar .env.example como plantilla)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Herramientas locales
+.claude/
