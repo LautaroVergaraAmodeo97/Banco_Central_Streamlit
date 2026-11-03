@@ -1,5 +1,5 @@
 /**
- * Gráfico de área de una serie temporal
+ * Gráfico de área de una serie temporal, con el trazo en el degradado de la marca
  */
 
 'use client'
@@ -8,28 +8,30 @@ import { useId } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatearCompacto, formatearFecha, formatearValor, reducirPuntos } from '@/lib/formato'
 
+const TICKS = { fill: 'var(--muted)', fontSize: 11, fontFamily: 'var(--font-mono)' }
+
 function TooltipSerie({ active, payload, unidad, mensual }) {
   if (!active || !payload?.length) return null
   const punto = payload[0].payload
   const formato = mensual ? { month: 'long', year: 'numeric' } : { day: '2-digit', month: 'long', year: 'numeric' }
   return (
-    <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-lg text-sm">
-      <p className="text-muted">{formatearFecha(punto.fecha, formato)}</p>
-      <p className="font-semibold">
-        {formatearValor(punto.valor)} <span className="font-normal text-muted">{unidad}</span>
+    <div className="panel px-3 py-2 text-sm shadow-xl">
+      <p className="etiqueta">{formatearFecha(punto.fecha, formato)}</p>
+      <p className="cifra mt-0.5 text-base font-medium">
+        {formatearValor(punto.valor)} <span className="text-xs text-muted">{unidad}</span>
       </p>
     </div>
   )
 }
 
-export default function GraficoSerie({ datos, color, unidad, mensual = false }) {
-  // Cada gráfico necesita su propio id de degradado: si dos comparten el mismo,
-  // el navegador usa el primero y el segundo se pinta con el color equivocado
-  const idRelleno = `relleno-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+export default function GraficoSerie({ datos, unidad, mensual = false, alto = 'h-72 sm:h-80' }) {
+  // Cada gráfico necesita sus propios ids de degradado: si dos comparten uno,
+  // el navegador usa el primero y el segundo se pinta mal
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
 
   if (!datos.length) {
     return (
-      <div className="h-80 grid place-items-center rounded-lg border border-dashed border-border text-muted">
+      <div className={`${alto} grid place-items-center border border-dashed border-border text-muted`}>
         No hay datos para el período seleccionado
       </div>
     )
@@ -43,43 +45,40 @@ export default function GraficoSerie({ datos, color, unidad, mensual = false }) 
     : { year: 'numeric' }
 
   return (
-    <div className="h-80 sm:h-96">
+    <div className={alto}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={puntos} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={puntos} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id={idRelleno} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            <linearGradient id={`trazo-${id}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#0b8bff" />
+              <stop offset="100%" stopColor="#13f2a1" />
+            </linearGradient>
+            <linearGradient id={`relleno-${id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#16c9de" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#16c9de" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="var(--grid)" vertical={false} />
+          <CartesianGrid stroke="var(--grid)" strokeDasharray="2 4" />
           <XAxis
             dataKey="fecha"
             tickFormatter={(f) => formatearFecha(f, formatoEje)}
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
+            tick={TICKS}
             tickLine={false}
             axisLine={{ stroke: 'var(--border)' }}
-            minTickGap={48}
+            minTickGap={44}
           />
-          <YAxis
-            domain={['auto', 'auto']}
-            tickFormatter={formatearCompacto}
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-            width={56}
-          />
+          <YAxis domain={['auto', 'auto']} tickFormatter={formatearCompacto} tick={TICKS} tickLine={false} axisLine={false} width={56} />
           <Tooltip
             content={<TooltipSerie unidad={unidad} mensual={mensual} />}
-            cursor={{ stroke: 'var(--muted)', strokeDasharray: '4 4' }}
+            cursor={{ stroke: 'var(--signal)', strokeDasharray: '3 3' }}
           />
           <Area
             type="monotone"
             dataKey="valor"
-            stroke={color}
+            stroke={`url(#trazo-${id})`}
             strokeWidth={2}
-            fill={`url(#${idRelleno})`}
-            activeDot={{ r: 4, strokeWidth: 0 }}
+            fill={`url(#relleno-${id})`}
+            activeDot={{ r: 4, fill: 'var(--signal)', strokeWidth: 0 }}
             animationDuration={400}
           />
         </AreaChart>

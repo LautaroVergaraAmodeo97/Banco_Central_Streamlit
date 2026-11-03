@@ -1,52 +1,52 @@
 /**
- * Navbar - Marca y menú de navegación
+ * Encabezado: marca, secciones y cinta de cotizaciones
  */
 
 'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Marca from '@/components/Marca'
+import Cinta from '@/components/Cinta'
 
-// Secciones de la página principal
 const secciones = [
-  { href: '/#indicadores', label: 'Indicadores' },
-  { href: '/#calculadora', label: 'Calculadora' },
-  { href: '/#nosotros', label: 'Quiénes somos' },
+  { href: '/', label: 'Inicio' },
+  { href: '/mercado', label: 'Mercado' },
+  { href: '/indec', label: 'INDEC' },
+  { href: '/inflacion', label: 'Inflación' },
+  { href: '/contacto', label: 'Contacto' },
 ]
 
 export default function Navbar() {
   const pathname = usePathname()
 
   return (
-    // Barra siempre oscura: es el fondo del logo de Prognosis, en modo claro y oscuro
-    <header className="sticky top-0 z-10 border-b border-white/10 bg-marca-fondo/95 backdrop-blur">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <Link href="/" aria-label="Prognosis, inicio" className="flex flex-col shrink-0 leading-none">
-          <span className="w-fit texto-marca font-marca font-bold text-xl sm:text-2xl tracking-wider">PROGNOSIS</span>
-          <span className="hidden sm:block mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-[#b2e0f8]">
-            Data, tecnología de predicción &amp; insights
-          </span>
+    <header className="sticky z-50 border-b border-border bg-bg/90 backdrop-blur" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="contenedor flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
+        <Link href="/" aria-label="Prognosis, inicio">
+          <Marca />
         </Link>
 
-        <nav aria-label="Principal" className="flex flex-wrap items-center gap-1">
-          {secciones.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-2.5 sm:px-3 py-2.5 rounded-md text-sm font-medium whitespace-nowrap text-[#b2e0f8] hover:text-white hover:bg-white/10"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link
-            href="/contacto"
-            aria-current={pathname === '/contacto' ? 'page' : undefined}
-            className="ml-1 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-marca-fondo bg-linear-to-r from-[#0b8bff] to-[#13f2a1] hover:opacity-90"
-          >
-            Contacto
-          </Link>
+        <nav aria-label="Secciones" className="-mx-1 flex flex-wrap">
+          {secciones.map((s) => {
+            const activa = pathname === s.href
+            return (
+              <Link
+                key={s.href}
+                href={s.href}
+                aria-current={activa ? 'page' : undefined}
+                className={`relative whitespace-nowrap px-3 py-2.5 font-display text-[15px] font-medium transition-colors ${
+                  activa ? 'text-text' : 'text-muted hover:text-text'
+                }`}
+              >
+                {s.label}
+                {activa && <span className="linea-senal absolute inset-x-3 bottom-0 h-[2px]" />}
+              </Link>
+            )
+          })}
         </nav>
       </div>
+      <Cinta />
     </header>
   )
 }

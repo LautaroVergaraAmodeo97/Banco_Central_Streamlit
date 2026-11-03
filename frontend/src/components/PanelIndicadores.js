@@ -1,15 +1,14 @@
 /**
- * Sección de indicadores: tarjetas de resumen + detalle de la serie elegida
+ * Mercado: lista de indicadores del BCRA y detalle de la serie elegida
  */
 
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import TarjetaIndicador from '@/components/TarjetaIndicador'
 import GraficoSerie from '@/components/GraficoSerie'
-import Variacion from '@/components/Variacion'
 import { obtenerSerie } from '@/services/api'
-import { COLORES, formatearFecha, formatearValor, parsearFecha } from '@/lib/formato'
+import { useResumenBCRA } from '@/lib/datos'
+import { formatearFecha, formatearValor, formatearVariacion, parsearFecha } from '@/lib/formato'
 
 const RANGOS = [
   { id: '1m', label: '1M', dias: 30 },
@@ -18,7 +17,7 @@ const RANGOS = [
   { id: '1a', label: '1A', dias: 365 },
   { id: '5a', label: '5A', dias: 1826 },
   { id: 'max', label: 'Máx', dias: null },
-  { id: 'custom', label: 'Personalizado', dias: null },
+  { id: 'custom', label: 'Fechas', dias: null },
 ]
 
 function aISO(fecha) {
@@ -37,16 +36,10 @@ function descargarCSV(nombre, datos) {
   URL.revokeObjectURL(url)
 }
 
-function Estadistica({ titulo, children }) {
-  return (
-    <div className="rounded-lg bg-surface-2 px-4 py-3">
-      <p className="text-xs font-medium text-muted uppercase tracking-wide">{titulo}</p>
-      <div className="mt-1 text-lg font-semibold">{children}</div>
-    </div>
-  )
-}
+const CAMPO_FECHA = 'h-10 border border-border bg-surface px-3 cifra text-sm'
 
-export default function PanelIndicadores({ resumen, errorResumen }) {
+export default function PanelIndicadores() {
+  const { datos: resumen, error: errorResumen } = useResumenBCRA()
   const [seleccion, setSeleccion] = useState('tipo-cambio-mayorista')
   const [series, setSeries] = useState({})
   const [erroresSerie, setErroresSerie] = useState({})
@@ -62,13 +55,9 @@ export default function PanelIndicadores({ resumen, errorResumen }) {
       .catch((e) => setErroresSerie((prev) => ({ ...prev, [seleccion]: e.message })))
   }, [seleccion, series, erroresSerie])
 
-  // Fecha más reciente entre los indicadores que sí trajeron datos
-  const ultimaActualizacion = resumen?.map((i) => i.ultima_fecha).filter(Boolean).sort().at(-1)
-
   const serie = series[seleccion]
   const errorSerie = erroresSerie[seleccion]
   const meta = resumen?.find((i) => i.id === seleccion) ?? serie
-  const color = COLORES[seleccion]
 
   const datosFiltrados = useMemo(() => {
     if (!serie) return []
@@ -87,14 +76,12 @@ export default function PanelIndicadores({ resumen, errorResumen }) {
   const estadisticas = useMemo(() => {
     if (!datosFiltrados.length) return null
     const valores = datosFiltrados.map((p) => p.valor)
-    const primero = valores[0]
-    const ultimo = valores.at(-1)
-    return {
-      ultimo,
-      minimo: Math.min(...valores),
-      maximo: Math.max(...valores),
-      variacion: primero ? ((ultimo / primero - 1) * 100) : null,
-    }
+    return [
+      ['Último', formatearValor(valores.at(-1))],
+      ['Mínimo', formatearValor(Math.min(...valores))],
+      ['Máximo', formatearValor(Math.max(...valores))],
+      ['Var. del período', formatearVariacion(valores[0] ? (valores.at(-1) / valores[0] - 1) * 100 : null)],
+    ]
   }, [datosFiltrados])
 
   function elegirRango(id) {
@@ -105,177 +92,163 @@ export default function PanelIndicadores({ resumen, errorResumen }) {
     setRango(id)
   }
 
+  if (errorResumen) {
+    return (
+      <p className="border border-neg/40 bg-neg-soft p-5 text-neg">
+        No se pudo conectar con la API. Verificá que el backend esté corriendo: <code className="font-mono">uvicorn app:app --reload</code>{' '}
+        en la carpeta <code className="font-mono">backend</code>.
+      </p>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Indicadores del BCRA</h2>
-          <p className="mt-2 text-muted">
-            Series oficiales actualizadas cada día. Elegí un indicador para ver su evolución.
-          </p>
-        </div>
-        {ultimaActualizacion && (
-          <p className="text-sm text-muted">Actualizado el {formatearFecha(ultimaActualizacion)}</p>
-        )}
-      </div>
+    <div className="space-y-8">
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Selector: lista de instrumentos */}
+        <ul className="border-t border-border lg:col-span-4">
+          {(resumen ?? Array.from({ length: 6 }, (_, i) => ({ id: `cargando-${i}` }))).map((r) => {
+            if (!r.nombre) return <li key={r.id} className="h-[4.25rem] animate-pulse border-b border-border bg-surface" />
+            const activo = r.id === seleccion
+            return (
+              <li key={r.id} className="border-b border-border">
+                <button
+                  type="button"
+                  onClick={() => setSeleccion(r.id)}
+                  aria-pressed={activo}
+                  className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 text-left transition-colors ${
+                    activo ? 'bg-accent-soft' : 'hover:bg-surface-2'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 font-medium">
+                      {activo && <span className="linea-senal h-3 w-[3px]" />}
+                      {r.nombre}
+                    </span>
+                    <span className="block truncate text-[12.5px] text-muted">{r.unidad}</span>
+                  </span>
+                  {r.error ? (
+                    <span className="text-xs text-neg">Sin datos</span>
+                  ) : (
+                    <span className="text-right">
+                      <span className="cifra block font-medium">{formatearValor(r.ultimo_valor)}</span>
+                      <span className="cifra block text-[11px] text-muted">{formatearVariacion(r.variacion_30d)} 30d</span>
+                    </span>
+                  )}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
 
-      {/* Resumen */}
-      {errorResumen ? (
-        <div className="rounded-xl border border-neg/40 bg-neg-soft p-5 text-neg">
-          <p className="font-medium">No se pudo conectar con la API.</p>
-          <p className="mt-1 text-sm">
-            Verificá que el backend esté corriendo: <code className="font-mono">uvicorn app:app --reload</code> en la carpeta{' '}
-            <code className="font-mono">backend</code>. ({errorResumen})
-          </p>
-        </div>
-      ) : (
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-          {resumen
-            ? resumen.map((ind) => (
-                <TarjetaIndicador
-                  key={ind.id}
-                  indicador={ind}
-                  seleccionada={ind.id === seleccion}
-                  onSeleccionar={() => setSeleccion(ind.id)}
-                />
-              ))
-            : Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="h-44 rounded-xl border border-border bg-surface animate-pulse" />
+        {/* Detalle */}
+        <div className="panel p-5 sm:p-6 lg:col-span-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-semibold">{meta?.nombre ?? '…'}</h2>
+              <p className="text-sm text-muted">
+                {meta?.descripcion}
+                {meta?.unidad && ` · ${meta.unidad}`}
+              </p>
+            </div>
+            <div role="group" aria-label="Período" className="flex flex-wrap border border-border p-0.5">
+              {RANGOS.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => elegirRango(r.id)}
+                  aria-pressed={rango === r.id}
+                  className={`h-8 px-3 font-mono text-xs transition-colors ${
+                    rango === r.id ? 'bg-accent text-on-accent' : 'text-muted hover:text-text'
+                  }`}
+                >
+                  {r.label}
+                </button>
               ))}
-        </section>
-      )}
-
-      {/* Detalle */}
-      <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-              <h2 className="text-xl font-semibold tracking-tight">{meta?.nombre ?? '…'}</h2>
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              {meta?.descripcion}
-              {meta?.unidad && ` · ${meta.unidad}`}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-1 rounded-lg bg-surface-2 p-1 self-start lg:self-auto">
-            {RANGOS.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => elegirRango(r.id)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  rango === r.id ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {rango === 'custom' && (
-          <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="text-sm">
-              <span className="block text-muted mb-1">Desde</span>
-              <input
-                type="date"
-                value={desde}
-                max={hasta || undefined}
-                onChange={(e) => setDesde(e.target.value)}
-                className="rounded-md border border-border bg-surface px-3 py-1.5"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-muted mb-1">Hasta</span>
-              <input
-                type="date"
-                value={hasta}
-                min={desde || undefined}
-                onChange={(e) => setHasta(e.target.value)}
-                className="rounded-md border border-border bg-surface px-3 py-1.5"
-              />
-            </label>
-          </div>
-        )}
-
-        {serie?.aviso && (
-          <p className="mt-4 rounded-md bg-surface-2 px-3 py-2 text-sm text-muted">{serie.aviso}</p>
-        )}
-
-        {errorSerie ? (
-          <p className="mt-6 text-neg">{errorSerie}</p>
-        ) : !serie ? (
-          <div className="mt-6 h-80 sm:h-96 grid place-items-center text-muted">
-            <div className="flex items-center gap-3">
-              <span className="w-5 h-5 rounded-full border-2 border-border border-t-accent animate-spin" />
-              Cargando serie…
             </div>
           </div>
-        ) : (
-          <>
-            {estadisticas && (
-              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Estadistica titulo="Último">{formatearValor(estadisticas.ultimo)}</Estadistica>
-                <Estadistica titulo="Mínimo">{formatearValor(estadisticas.minimo)}</Estadistica>
-                <Estadistica titulo="Máximo">{formatearValor(estadisticas.maximo)}</Estadistica>
-                <Estadistica titulo="Var. del período">
-                  <Variacion valor={estadisticas.variacion} />
-                </Estadistica>
+
+          {rango === 'custom' && (
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="text-sm">
+                <span className="etiqueta mb-1 block">Desde</span>
+                <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} className={CAMPO_FECHA} />
+              </label>
+              <label className="text-sm">
+                <span className="etiqueta mb-1 block">Hasta</span>
+                <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} className={CAMPO_FECHA} />
+              </label>
+            </div>
+          )}
+
+          {serie?.aviso && <p className="mt-4 border border-dashed border-border px-3 py-2 text-sm text-muted">{serie.aviso}</p>}
+
+          {errorSerie ? (
+            <p className="mt-6 text-neg">{errorSerie}</p>
+          ) : !serie ? (
+            <div className="mt-6 grid h-80 place-items-center text-muted">Cargando serie…</div>
+          ) : (
+            <>
+              {estadisticas && (
+                <dl className="mt-6 grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-4">
+                  {estadisticas.map(([titulo, valor]) => (
+                    <div key={titulo} className="bg-surface px-4 py-3">
+                      <dt className="etiqueta">{titulo}</dt>
+                      <dd className="cifra mt-1 text-lg font-medium">{valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <div className="mt-6">
+                <GraficoSerie datos={datosFiltrados} unidad={meta?.unidad} />
               </div>
-            )}
-
-            <div className="mt-6">
-              <GraficoSerie datos={datosFiltrados} color={color} unidad={meta?.unidad} />
-            </div>
-          </>
-        )}
-      </section>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Últimos valores */}
       {serie && datosFiltrados.length > 0 && (
-        <section className="rounded-xl border border-border bg-surface">
-          <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-4 border-b border-border">
+        <section className="border border-border bg-surface">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-6">
             <div>
-              <h2 className="font-semibold">Últimos valores</h2>
-              <p className="text-sm text-muted">
-                {datosFiltrados.length.toLocaleString('es-AR')} registros entre{' '}
-                {formatearFecha(datosFiltrados[0].fecha)} y {formatearFecha(datosFiltrados.at(-1).fecha)}
+              <h2 className="text-lg font-semibold">Últimos valores</h2>
+              <p className="cifra text-[12px] text-muted">
+                {datosFiltrados.length.toLocaleString('es-AR')} registros entre {formatearFecha(datosFiltrados[0].fecha)} y{' '}
+                {formatearFecha(datosFiltrados.at(-1).fecha)}
               </p>
             </div>
             <button
               type="button"
               onClick={() => descargarCSV(seleccion, datosFiltrados)}
-              className="shrink-0 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-2"
+              className="min-h-10 shrink-0 border border-border px-4 font-display text-sm font-semibold hover:bg-surface-2"
             >
               Descargar CSV
             </button>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="px-4 sm:px-6 py-2 font-medium">Fecha</th>
-                <th className="px-4 sm:px-6 py-2 font-medium text-right">Valor</th>
-                <th className="px-4 sm:px-6 py-2 font-medium text-right">Var. diaria</th>
-              </tr>
-            </thead>
-            <tbody>
-              {datosFiltrados.slice(-11).map((p, i, arr) => {
-                if (i === 0) return null
-                const variacion = arr[i - 1].valor ? (p.valor / arr[i - 1].valor - 1) * 100 : null
-                return { ...p, variacion }
-              }).filter(Boolean).reverse().map((p) => (
-                <tr key={p.fecha} className="border-t border-border">
-                  <td className="px-4 sm:px-6 py-2.5">{formatearFecha(p.fecha, { day: '2-digit', month: 'long', year: 'numeric' })}</td>
-                  <td className="px-4 sm:px-6 py-2.5 text-right font-medium">{formatearValor(p.valor)}</td>
-                  <td className="px-4 sm:px-6 py-2.5 text-right text-xs">
-                    <Variacion valor={p.variacion} />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="etiqueta px-4 py-2 font-normal sm:px-6">Fecha</th>
+                  <th className="etiqueta px-4 py-2 text-right font-normal sm:px-6">Valor</th>
+                  <th className="etiqueta px-4 py-2 text-right font-normal sm:px-6">Var. diaria</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {datosFiltrados.slice(-11).map((p, i, arr) => {
+                  if (i === 0) return null
+                  const variacion = arr[i - 1].valor ? (p.valor / arr[i - 1].valor - 1) * 100 : null
+                  return { ...p, variacion }
+                }).filter(Boolean).reverse().map((p) => (
+                  <tr key={p.fecha} className="border-t border-border">
+                    <td className="px-4 py-2.5 sm:px-6">{formatearFecha(p.fecha, { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+                    <td className="cifra px-4 py-2.5 text-right font-medium sm:px-6">{formatearValor(p.valor)}</td>
+                    <td className="cifra px-4 py-2.5 text-right text-muted sm:px-6">{formatearVariacion(p.variacion)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
     </div>

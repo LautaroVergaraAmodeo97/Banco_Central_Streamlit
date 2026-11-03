@@ -21,6 +21,7 @@ Se cargan en **Project Settings → Environment Variables** de cada proyecto. Nu
 | `FRONTEND_ORIGINS` | URL del frontend, por ejemplo `https://prognosis.vercel.app` (varias separadas por coma) |
 | `MAIL_USERNAME`, `MAIL_FROM`, `MAIL_TO` | La cuenta de Gmail del formulario de contacto |
 | `MAIL_PASSWORD` | Contraseña de aplicación de Google, marcada como **Sensitive** |
+| `INDEC_TOKEN` | Token JWT del Catálogo API-INDEC, marcado como **Sensitive** |
 
 ### Frontend
 | Variable | Valor |

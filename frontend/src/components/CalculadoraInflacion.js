@@ -9,7 +9,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import GraficoSerie from '@/components/GraficoSerie'
 import { obtenerSerie } from '@/services/api'
 import { MESES, formatearValor } from '@/lib/formato'
 
@@ -86,7 +85,7 @@ function SelectorMes({ id, valor, onCambiar, minimo, maximo }) {
     if (nuevo > maximo) nuevo = maximo
     onCambiar(nuevo)
   }
-  const clase = 'min-h-11 rounded-lg border border-border bg-surface px-3 font-medium focus:outline-none focus:ring-2 focus:ring-accent/40'
+  const clase = 'min-h-11 border border-border bg-surface px-2 text-sm font-medium'
 
   return (
     <div className="flex gap-2">
@@ -111,7 +110,7 @@ export default function CalculadoraInflacion() {
   const [error, setError] = useState(null)
   const [desde, setDesde] = useState(null)
   const [hasta, setHasta] = useState(null)
-  const [texto, setTexto] = useState('100')
+  const [texto, setTexto] = useState('100.000')
   const [campoActivo, setCampoActivo] = useState('desde') // el monto que escribió el usuario
 
   useEffect(() => {
@@ -126,10 +125,10 @@ export default function CalculadoraInflacion() {
   const mesHasta = hasta ?? ultimoMes
 
   if (error) {
-    return <p className="rounded-xl bg-neg-soft p-5 text-neg">No se pudieron cargar los datos de inflación: {error}</p>
+    return <p className="border border-neg/40 bg-neg-soft p-5 text-neg">No se pudieron cargar los datos de inflación: {error}</p>
   }
   if (!calculo) {
-    return <div className="h-96 rounded-2xl border border-border bg-surface animate-pulse" />
+    return <div className="panel h-96 animate-pulse" />
   }
 
   const { indice } = calculo
@@ -145,12 +144,6 @@ export default function CalculadoraInflacion() {
   const promedioMensual = meses ? (variacion ** (1 / meses) - 1) * 100 : 0
   const anualizada = meses ? (variacion ** (12 / meses) - 1) * 100 : 0
 
-  const montoBase = anterior === mesDesde ? montoDesde : montoHasta
-  const evolucion = montoBase === null ? [] : Array.from({ length: meses + 1 }, (_, i) => {
-    const mes = sumarMeses(anterior, i)
-    return { fecha: `${mes}-01`, valor: montoBase * indice[mes] / indice[anterior] }
-  })
-
   const mostrar = (campo, valor) =>
     campoActivo === campo ? texto : valor === null ? '' : formatearValor(valor)
   const escribir = (campo) => (e) => {
@@ -165,126 +158,110 @@ export default function CalculadoraInflacion() {
     setHasta(ultimoMes)
     setDesde(p.desde ?? sumarMeses(ultimoMes, -p.meses))
   }
-  const claseMonto = 'w-full min-h-12 rounded-lg border border-border bg-surface pl-8 pr-3 text-xl font-semibold focus:outline-none focus:ring-2 focus:ring-accent/40'
+  const claseMonto = 'cifra w-full min-h-12 border border-border bg-bg pl-8 pr-3 text-xl'
+
+  const campoMonto = (campo, valor, etiqueta) => (
+    <>
+      <label htmlFor={`monto-${campo}`} className="etiqueta">{etiqueta}</label>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <span className="cifra absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true">$</span>
+          <input id={`monto-${campo}`} inputMode="decimal" value={mostrar(campo, valor)} onChange={escribir(campo)} className={claseMonto} />
+        </div>
+        <SelectorMes id={campo} valor={campo === 'desde' ? mesDesde : mesHasta} onCambiar={campo === 'desde' ? setDesde : setHasta} minimo={PRIMER_MES} maximo={ultimoMes} />
+      </div>
+    </>
+  )
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 sm:p-8">
-      <div className="flex flex-wrap gap-2">
-        {PERIODOS.map((p) => (
-          <button
-            key={p.label}
-            type="button"
-            onClick={() => elegirPeriodo(p)}
-            className="min-h-9 px-3 rounded-full border border-border text-sm font-medium text-muted hover:text-text hover:bg-surface-2"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="relative flex-1 min-w-0">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted" aria-hidden="true">$</span>
-              <label htmlFor="monto-desde" className="sr-only">Monto en el mes de origen</label>
-              <input id="monto-desde" inputMode="decimal" value={mostrar('desde', montoDesde)} onChange={escribir('desde')} className={claseMonto} />
-            </div>
-            <span className="text-sm text-muted">en</span>
-            <SelectorMes id="desde" valor={mesDesde} onCambiar={setDesde} minimo={PRIMER_MES} maximo={ultimoMes} />
-          </div>
-
-          <div className="my-4 flex items-center gap-3 text-sm text-muted">
-            <span className="h-px flex-1 bg-border" />
-            equivale aproximadamente a
+    <div className="grid gap-6 lg:grid-cols-12">
+      <div className="panel p-5 sm:p-6 lg:col-span-7">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Períodos rápidos">
+          {PERIODOS.map((p) => (
             <button
+              key={p.label}
               type="button"
-              onClick={invertir}
-              aria-label="Invertir los meses"
-              className="grid place-items-center w-10 h-10 rounded-full border border-border text-text hover:bg-surface-2"
+              onClick={() => elegirPeriodo(p)}
+              className="h-8 border border-border px-3 font-mono text-xs text-muted hover:bg-surface-2 hover:text-text"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4" />
-              </svg>
+              {p.label}
             </button>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="relative flex-1 min-w-0">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted" aria-hidden="true">$</span>
-              <label htmlFor="monto-hasta" className="sr-only">Monto en el mes de destino</label>
-              <input id="monto-hasta" inputMode="decimal" value={mostrar('hasta', montoHasta)} onChange={escribir('hasta')} className={claseMonto} />
-            </div>
-            <span className="text-sm text-muted">en</span>
-            <SelectorMes id="hasta" valor={mesHasta} onCambiar={setHasta} minimo={PRIMER_MES} maximo={ultimoMes} />
-          </div>
-
-          <div className="mt-6 rounded-xl bg-surface-2 p-5" aria-live="polite">
-            {meses === 0 ? (
-              <p className="text-muted">Elegí dos meses distintos para ver la inflación acumulada.</p>
-            ) : (
-              <>
-                <p className="text-sm text-muted">
-                  Inflación acumulada entre {nombreMes(anterior)} y {nombreMes(posterior)}
-                </p>
-                <p className="mt-1 text-4xl font-bold tracking-tight">{formatearPorcentaje((variacion - 1) * 100)}</p>
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <dt className="text-muted">Promedio mensual</dt>
-                    <dd className="mt-0.5 text-lg font-semibold">{formatearPorcentaje(promedioMensual)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Anualizada</dt>
-                    <dd className="mt-0.5 text-lg font-semibold">{formatearPorcentaje(anualizada)}</dd>
-                  </div>
-                </dl>
-                {anterior < '2016-01' && posterior > '2007-01' && (
-                  <p className="mt-4 text-xs leading-relaxed text-muted">
-                    El período incluye meses de 2007 a 2015, cuando el IPC oficial fue cuestionado: la inflación real
-                    pudo ser mayor. Ver las fuentes más abajo.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+          ))}
         </div>
 
-        <div className="min-w-0">
-          <p className="text-sm font-medium">
-            {montoBase !== null && meses > 0
-              ? `Cuánto se necesita para comprar lo mismo que $${formatearValor(montoBase)} en ${nombreMes(anterior)}`
-              : 'Evolución del monto ajustado por inflación'}
-          </p>
-          <div className="mt-3">
-            <GraficoSerie datos={meses > 0 ? evolucion : []} color="#3b6fe0" unidad="ARS" mensual />
-          </div>
+        <div className="mt-6">{campoMonto('desde', montoDesde, 'Monto original')}</div>
+
+        <div className="my-5 flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="etiqueta">equivale a</span>
+          <button
+            type="button"
+            onClick={invertir}
+            aria-label="Invertir los meses"
+            className="grid h-10 w-10 place-items-center border border-border hover:bg-surface-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4" />
+            </svg>
+          </button>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        {campoMonto('hasta', montoHasta, 'Monto actualizado')}
+
+        <div className="mt-6 border-t border-border pt-5" aria-live="polite">
+          {meses === 0 ? (
+            <p className="text-muted">Elegí dos meses distintos para ver la inflación acumulada.</p>
+          ) : (
+            <>
+              <p className="etiqueta">Inflación acumulada · {nombreMes(anterior)} → {nombreMes(posterior)}</p>
+              <p className="cifra texto-marca mt-1 w-fit text-5xl font-medium">{formatearPorcentaje((variacion - 1) * 100)}</p>
+              <dl className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <dt className="etiqueta">Promedio mensual</dt>
+                  <dd className="cifra mt-1 text-lg">{formatearPorcentaje(promedioMensual)}</dd>
+                </div>
+                <div>
+                  <dt className="etiqueta">Anualizada</dt>
+                  <dd className="cifra mt-1 text-lg">{formatearPorcentaje(anualizada)}</dd>
+                </div>
+              </dl>
+              {anterior < '2016-01' && posterior > '2007-01' && (
+                <p className="mt-4 text-xs leading-relaxed text-muted">
+                  El período incluye meses de 2007 a 2015, cuando el IPC oficial fue cuestionado: la inflación real
+                  pudo ser mayor. Ver las fuentes.
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <section aria-labelledby="fuentes-inflacion" className="mt-8 border-t border-border pt-6 text-sm leading-relaxed text-muted">
-        <h3 id="fuentes-inflacion" className="font-semibold text-text">Fuentes</h3>
-        <ul className="mt-3 space-y-2 list-disc pl-5">
-          <li>
-            <span className="text-text">Índice de Precios al Consumidor (IPC)</span> del{' '}
-            <a href={FUENTES.indec} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">INDEC</a>,
-            variación mensual. Se obtiene de la serie “Inflación mensual” de la{' '}
-            <a href={FUENTES.apiBcra} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">API de Estadísticas del BCRA</a>{' '}
-            (último dato: {nombreMes(sumarMeses(ultimoMes, -1))}).
-          </li>
-          <li>
-            Entre 2007 y 2015 las cifras oficiales del IPC fueron cuestionadas y suelen mostrar una inflación menor a la de
-            mediciones alternativas. Para ese período, ver Cavallo, A. (2012), <cite>Online and official price indexes:
-            Measuring Argentina’s inflation</cite>, MIT Sloan Research Paper No. 4975-12,{' '}
-            <a href={FUENTES.cavallo} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">doi:10.2139/ssrn.1906704</a>.
-          </li>
-        </ul>
-        <p className="mt-3 text-xs">
-          Cada mes se interpreta como su primer día: “enero de 1992” equivale al 1 de enero de 1992. El cálculo arranca en
-          enero de 1992, cuando se introdujo el peso actual. Puede haber diferencias menores por redondeo, ya que la
-          inflación mensual se publica con un decimal.
-        </p>
-      </section>
+      <div className="min-w-0 lg:col-span-5">
+        <section aria-labelledby="fuentes-inflacion" className="border-t border-border pt-5 text-sm leading-relaxed text-muted">
+          <h2 id="fuentes-inflacion" className="etiqueta">Fuentes</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5">
+            <li>
+              <span className="text-text">Índice de Precios al Consumidor (IPC)</span> del{' '}
+              <a href={FUENTES.indec} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">INDEC</a>,
+              variación mensual. Se obtiene de la serie “Inflación mensual” de la{' '}
+              <a href={FUENTES.apiBcra} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">API de Estadísticas del BCRA</a>{' '}
+              (último dato: {nombreMes(sumarMeses(ultimoMes, -1))}).
+            </li>
+            <li>
+              Entre 2007 y 2015 las cifras oficiales del IPC fueron cuestionadas y suelen mostrar una inflación menor a la de
+              mediciones alternativas. Para ese período, ver Cavallo, A. (2012), <cite>Online and official price indexes:
+              Measuring Argentina’s inflation</cite>, MIT Sloan Research Paper No. 4975-12,{' '}
+              <a href={FUENTES.cavallo} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">doi:10.2139/ssrn.1906704</a>.
+            </li>
+          </ul>
+          <p className="mt-3 text-xs">
+            Cada mes se interpreta como su primer día: “enero de 1992” equivale al 1 de enero de 1992. El cálculo arranca en
+            enero de 1992, cuando se introdujo el peso actual. Puede haber diferencias menores por redondeo, ya que la
+            inflación mensual se publica con un decimal.
+          </p>
+        </section>
+      </div>
     </div>
   )
 }

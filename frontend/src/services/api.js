@@ -34,6 +34,39 @@ export function obtenerSerie(id, fechaInicio = null, fechaFin = null) {
   return apiRequest(`/api/${id}${query ? `?${query}` : ''}`)
 }
 
+// ==================== INDEC ====================
+
+/** Resumen de las series clave del INDEC */
+export function obtenerSeriesIndec() {
+  return apiRequest('/api/indec/series')
+}
+
+/** Serie completa de un indicador clave del INDEC (id: 'ipc-mensual', 'emae', ...) */
+export function obtenerSerieIndec(id) {
+  return apiRequest(`/api/indec/series/${encodeURIComponent(id)}`)
+}
+
+/** Exportaciones e importaciones de un año */
+export function obtenerComercioExterior(anio) {
+  return apiRequest(`/api/indec/comercio/${encodeURIComponent(anio)}`)
+}
+
+/** Las 19 tablas del Catálogo API-INDEC */
+export function obtenerCatalogoIndec() {
+  return apiRequest('/api/indec')
+}
+
+/** Valores posibles de las columnas de categorías de una tabla */
+export function obtenerDimensionesIndec(tabla) {
+  return apiRequest(`/api/indec/${encodeURIComponent(tabla)}/dimensiones`)
+}
+
+/** Filas de una tabla del INDEC filtradas por columna ({ region: 'GBA', ... }) */
+export function consultarTablaIndec(tabla, filtros = {}) {
+  const query = new URLSearchParams(filtros).toString()
+  return apiRequest(`/api/indec/${encodeURIComponent(tabla)}${query ? `?${query}` : ''}`)
+}
+
 /** Envía el formulario de contacto */
 export function enviarContacto(formulario) {
   return apiRequest('/api/contacto/enviar', {

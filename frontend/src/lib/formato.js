@@ -1,14 +1,19 @@
 /**
- * Utilidades de formato (es-AR) y colores por indicador
+ * Utilidades de formato (es-AR)
  */
 
-export const COLORES = {
-  reservas: '#2a9d6f',
-  'tipo-cambio-minorista': '#3b6fe0',
-  'tipo-cambio-mayorista': '#7b5cd6',
-  baibar: '#d9822b',
-  'base-monetaria': '#1f9bb5',
-  itcrm: '#d0507a',
+/** Formatea un valor según su unidad: '%', '$', 'índice' o 'personas' */
+export function formatearConUnidad(valor, unidad) {
+  if (valor === null || valor === undefined) return '—'
+  if (unidad === '%') return `${valor.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`
+  if (unidad === '$') return `$ ${valor.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+  if (unidad === 'personas') return `${(valor / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 })} M`
+  return valor.toLocaleString('es-AR', { maximumFractionDigits: 1 })
+}
+
+/** Millones de dólares a partir de un valor en dólares */
+export function formatearMillonesUSD(valor) {
+  return `US$ ${(valor / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 0 })} M`
 }
 
 export const MESES = [

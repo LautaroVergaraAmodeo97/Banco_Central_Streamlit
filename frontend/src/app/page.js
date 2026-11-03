@@ -1,66 +1,60 @@
 /**
- * Página principal: portada, indicadores, calculadora de inflación y quiénes somos
+ * Página principal: portada, lectura del día, herramientas y quiénes somos
  */
 
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Hero from '@/components/Hero'
-import PanelIndicadores from '@/components/PanelIndicadores'
-import CalculadoraInflacion from '@/components/CalculadoraInflacion'
+import LecturaDelDia from '@/components/LecturaDelDia'
 import Nosotros from '@/components/Nosotros'
-import { obtenerResumen } from '@/services/api'
+import { useResumenBCRA, useResumenIndec } from '@/lib/datos'
+
+const HERRAMIENTAS = [
+  { href: '/mercado', titulo: 'Mercado', texto: 'Dólar, reservas, tasas, base monetaria y tipo de cambio real, con series desde 1996.' },
+  { href: '/indec', titulo: 'Estadísticas del INDEC', texto: 'Inflación, actividad, salarios, canastas, pobreza, empleo y comercio exterior.' },
+  { href: '/inflacion', titulo: 'Calculadora de inflación', texto: 'Actualizá cualquier monto entre dos meses desde enero de 1992.' },
+]
 
 export default function Inicio() {
-  const [resumen, setResumen] = useState(null)
-  const [errorResumen, setErrorResumen] = useState(null)
-
-  useEffect(() => {
-    obtenerResumen()
-      .then(setResumen)
-      .catch((e) => setErrorResumen(e.message))
-  }, [])
-
-  const mayorista = errorResumen
-    ? { error: errorResumen }
-    : resumen?.find((i) => i.id === 'tipo-cambio-mayorista')
+  const { datos: bcra, error } = useResumenBCRA()
+  const { datos: indec } = useResumenIndec()
+  const mayorista = error ? { error } : bcra?.find((i) => i.id === 'tipo-cambio-mayorista')
 
   return (
     <>
       <Hero mayorista={mayorista} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-24">
-        <section id="indicadores" className="scroll-mt-40 sm:scroll-mt-24">
-          <PanelIndicadores resumen={resumen} errorResumen={errorResumen} />
-        </section>
-
-        <section id="calculadora" className="scroll-mt-40 sm:scroll-mt-24">
-          <p className="text-sm font-semibold uppercase tracking-wider text-accent">Herramienta</p>
-          <h2 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight">Calculadora de inflación acumulada</h2>
-          <p className="mt-2 max-w-2xl text-muted">
-            Convertí precios entre cualquier mes desde enero de 1992 y hoy. Escribí un monto en cualquiera de los
-            dos campos y te mostramos su equivalente ajustado por inflación.
+      {error ? (
+        <div className="contenedor py-10">
+          <p className="border border-neg/40 bg-neg-soft p-5 text-neg">
+            No se pudo conectar con la API. Verificá que el backend esté corriendo: <code className="font-mono">uvicorn app:app --reload</code>{' '}
+            en la carpeta <code className="font-mono">backend</code>.
           </p>
-          <div className="mt-6">
-            <CalculadoraInflacion />
-          </div>
-        </section>
+        </div>
+      ) : (
+        <LecturaDelDia bcra={bcra} indec={indec} />
+      )}
 
-        <Nosotros />
+      <section className="border-y border-border bg-surface">
+        <div className="contenedor grid md:grid-cols-3">
+          {HERRAMIENTAS.map((h, i) => (
+            <Link
+              key={h.href}
+              href={h.href}
+              className={`group flex flex-col gap-3 py-8 md:px-8 ${i ? 'border-t border-border md:border-t-0 md:border-l' : 'md:pl-0'}`}
+            >
+              <span className="flex items-center justify-between gap-3 font-display text-xl font-semibold">
+                {h.titulo}
+                <span aria-hidden="true" className="text-signal transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5">↗</span>
+              </span>
+              <span className="text-muted">{h.texto}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-        <section className="rounded-2xl bg-[#111827] text-white p-8 sm:p-12 flex flex-wrap items-center justify-between gap-6">
-          <div className="max-w-xl">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">¿Necesitás un análisis a medida?</h2>
-            <p className="mt-2 text-lg text-[#cbd2dc]">
-              Contanos sobre tu empresa o emprendimiento y te respondemos a la brevedad.
-            </p>
-          </div>
-          <Link href="/contacto" className="inline-flex items-center min-h-12 px-6 rounded-lg bg-white text-[#111827] font-semibold hover:opacity-90">
-            Escribinos
-          </Link>
-        </section>
-      </div>
+      <Nosotros />
     </>
   )
 }

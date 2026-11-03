@@ -39,3 +39,6 @@ MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
 
 CORREO_CONFIGURADO = all([MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, MAIL_TO])
+
+# Token JWT personal del Catálogo API-INDEC (https://api.indec.gob.ar/docs)
+INDEC_TOKEN = os.getenv("INDEC_TOKEN", "")

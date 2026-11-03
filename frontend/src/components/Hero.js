@@ -1,84 +1,78 @@
 /**
- * Portada: presentación de Prognosis y dato destacado del dólar mayorista
+ * Portada: la tesis de Prognosis y la señal del día (dólar mayorista)
  */
 
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts'
-import Variacion from '@/components/Variacion'
-import { COLORES, formatearFecha, formatearValor } from '@/lib/formato'
+import GraficoSerie from '@/components/GraficoSerie'
+import { obtenerSerie } from '@/services/api'
+import { formatearFecha, formatearValor, formatearVariacion } from '@/lib/formato'
 
-function TarjetaDestacada({ indicador }) {
-  const color = COLORES['tipo-cambio-mayorista']
+function SenalDelDia({ mayorista }) {
+  const [serie, setSerie] = useState(null)
 
-  if (!indicador) {
-    return <div className="h-72 rounded-2xl border border-border bg-surface-2 animate-pulse" />
-  }
-  if (indicador.error) {
-    return (
-      <div className="rounded-2xl border border-border bg-surface-2 p-6 text-sm text-muted">
-        No se pudo cargar la cotización del dólar mayorista.
-      </div>
-    )
+  useEffect(() => {
+    const haceUnAnio = new Date()
+    haceUnAnio.setFullYear(haceUnAnio.getFullYear() - 1)
+    obtenerSerie('tipo-cambio-mayorista', haceUnAnio.toISOString().slice(0, 10))
+      .then((s) => setSerie(s.datos))
+      .catch(() => setSerie([]))
+  }, [])
+
+  if (!mayorista) return <div className="panel h-80 animate-pulse" />
+  if (mayorista.error) {
+    return <div className="panel p-6 text-sm text-muted">No se pudo cargar la cotización del dólar mayorista.</div>
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface-2 p-6">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <p className="font-semibold text-muted">Dólar mayorista · Com. A 3500</p>
-        <p className="text-xs text-muted">{formatearFecha(indicador.ultima_fecha)}</p>
+    <div className="panel p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="etiqueta">Dólar mayorista · Com. A 3500</p>
+          <p className="cifra mt-2 text-[2.6rem] font-medium leading-none">${formatearValor(mayorista.ultimo_valor)}</p>
+        </div>
+        <dl className="cifra grid grid-cols-2 gap-x-5 gap-y-1 text-right text-sm">
+          <dt className="text-muted">30 días</dt>
+          <dd className="text-signal">{formatearVariacion(mayorista.variacion_30d)}</dd>
+          <dt className="text-muted">12 meses</dt>
+          <dd className="text-signal">{formatearVariacion(mayorista.variacion_1a)}</dd>
+        </dl>
       </div>
-      <p className="mt-3 text-4xl sm:text-5xl font-bold tracking-tight">${formatearValor(indicador.ultimo_valor)}</p>
-      <div className="mt-3 flex flex-wrap gap-2 text-sm">
-        <Variacion valor={indicador.variacion_30d} sufijo="en 30 días" />
-        <Variacion valor={indicador.variacion_1a} sufijo="en un año" />
+      <div className="mt-5">
+        {serie ? <GraficoSerie datos={serie} unidad="ARS por USD" alto="h-56" /> : <div className="h-56 animate-pulse bg-surface-2" />}
       </div>
-      <div className="h-24 mt-5 -mx-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={indicador.sparkline} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id="relleno-hero" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <YAxis hide domain={['dataMin', 'dataMax']} />
-            <Area type="monotone" dataKey="valor" stroke={color} strokeWidth={2} fill="url(#relleno-hero)" isAnimationActive={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <p className="mt-3 text-xs text-muted">Últimos 12 meses · ARS por USD</p>
+      <p className="etiqueta mt-3">Último dato {formatearFecha(mayorista.ultima_fecha)} · ARS por USD · fuente BCRA</p>
     </div>
   )
 }
 
 export default function Hero({ mayorista }) {
   return (
-    <section id="inicio" className="bg-surface border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 grid gap-12 lg:grid-cols-[1.25fr_1fr] items-center">
-        <div>
-          <p className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            Consultora económica · Datos oficiales del BCRA
-          </p>
-          <h1 className="mt-5 text-4xl sm:text-5xl font-bold leading-[1.08] tracking-tight">
-            Decisiones económicas respaldadas por datos confiables.
+    <section className="fondo-grilla border-b border-border">
+      <div className="contenedor grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
+        <div className="flex flex-col justify-center lg:col-span-6">
+          <p className="etiqueta">Consultora económica · Argentina</p>
+          <h1 className="mt-4 text-[clamp(2.3rem,5vw,3.6rem)] font-semibold leading-[1.02]">
+            Datos oficiales de la economía argentina, leídos para decidir.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            Somos Prognosis, una consultora que asesora a empresas y emprendimientos en sus decisiones económicas.
-            Seguimos a diario los indicadores del Banco Central y los convertimos en análisis claros para tu negocio.
+          <p className="mt-5 max-w-[34rem] text-[17px] text-muted">
+            Prognosis asesora a empresas y emprendimientos con datos confiables y análisis detallados. Seguimos cada día
+            al Banco Central y al INDEC para que planifiques precios, costos e inversiones con información, no con intuición.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#indicadores" className="inline-flex items-center min-h-12 px-5 rounded-lg bg-accent text-white font-semibold hover:opacity-90">
-              Ver indicadores
-            </a>
-            <Link href="/contacto" className="inline-flex items-center min-h-12 px-5 rounded-lg border border-border font-semibold hover:bg-surface-2">
-              Hablemos de tu empresa
+            <Link href="/mercado" className="inline-flex min-h-11 items-center bg-accent px-6 font-display text-[15px] font-semibold text-on-accent hover:opacity-90">
+              Ver el mercado
+            </Link>
+            <Link href="/contacto" className="inline-flex min-h-11 items-center border border-border px-6 font-display text-[15px] font-semibold hover:bg-surface-2">
+              Hablar con un analista
             </Link>
           </div>
         </div>
-        <TarjetaDestacada indicador={mayorista} />
+        <div className="lg:col-span-6">
+          <SenalDelDia mayorista={mayorista} />
+        </div>
       </div>
     </section>
   )
